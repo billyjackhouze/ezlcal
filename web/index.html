@@ -143,6 +143,15 @@ dl.kv dt{text-align:right;color:var(--sub)} dl.kv dd{margin:0}
   .backbtn{display:inline-flex!important}
 }
 .backbtn{display:none}
+.adm{flex:1;overflow:auto;padding:20px 24px}
+.adm table{width:100%;border-collapse:collapse;min-width:820px}
+.adm th{text-align:left;font-weight:500;color:var(--sub);font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line)}
+.adm td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.adm tr.off td{opacity:.55}
+.badge{display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;background:var(--btnOn)}
+.badge.admin{background:var(--cStaff);color:var(--cStaffFg)} .badge.warn{background:var(--warnBg);color:var(--warnFg)}
+.adm .acts{display:flex;gap:6px;flex-wrap:wrap}.adm .acts .btn{height:28px;padding:0 9px;font-size:12px}
+.pwbox{font:600 22px/1.2 ui-monospace,Menlo,monospace;letter-spacing:1px;padding:14px;border-radius:10px;background:var(--btnOn);text-align:center;user-select:all}
 .gate{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
 .gate .card{width:100%;max-width:360px;background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:24px;box-shadow:0 10px 40px var(--shadow)}
 .gate h1{font-size:20px;margin:6px 0 4px}.gate label{display:block;margin:14px 0 4px;color:var(--sub)}
@@ -340,7 +349,7 @@ function renderStatus(){
 }
 function render(){
   const app=$('#app');
-  const tabs=[['team','Team'],['cal','Calendar'],['a','Accounts'],['c','Contacts'],['s','Staff']];
+  const tabs=[['team','Team'],['cal','Calendar'],['a','Accounts'],['c','Contacts'],['s','Staff']].concat(EZ.user.is_admin?[['admin','Admin']]:[]);
   app.innerHTML=`<header class="top">
     <span class="brand"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" aria-hidden="true"><path d="M3 12h18M7 7l-4 5 4 5M17 7l4 5-4 5"/></svg>EZLine CRM</span>
     <nav class="tabs" aria-label="Sections">${tabs.map(([k,l])=>`<button class="tab" data-tab="${k}" ${S.view===k?'aria-current="page"':''}>${l}</button>`).join('')}</nav>
@@ -353,6 +362,7 @@ function render(){
   const main=$('#main');
   if(S.view==='team') renderTeam(main);
   else if(S.view==='cal') renderCal(main);
+  else if(S.view==='admin') renderAdmin(main);
   else renderEntity(main,S.view);
   renderStatus();
   if(S.modal) renderModal();
@@ -507,6 +517,99 @@ function detailHtml(k,i){
     </section><aside class="activity pane"><b>All activity</b>${timeline(evs)}</aside>`;
 }
 document.addEventListener('change',e=>{if(e.target.matches('[data-fam]')){S.fam=e.target.checked;render();}});
+
+/* ---------- admin ---------- */
+let ADM=null, admBusy=false;
+async function loadAdmin(){
+  admBusy=true;
+  try{const r=await EZ.api('/admin/users');ADM=r.ok?await r.json():{error:(await r.json().catch(()=>({}))).detail||'Could not load users'};}
+  catch(e){if(!(e&&e.code===401))ADM={error:'You need a connection to manage users.'};}
+  admBusy=false; if(S.view==='admin')render();
+}
+function renderAdmin(main){
+  if(!ADM){main.innerHTML='<div class="empty">Loading people…</div>';if(!admBusy)loadAdmin();return;}
+  if(ADM.error){main.innerHTML=`<div class="empty">${esc(ADM.error)} <button class="btn" data-adm="reload">Try again</button></div>`;wireAdmin(main);return;}
+  const staffName=id=>{const s=ADM.staff.find(x=>x.id===id);return s?s.name:'';};
+  const linked=new Set(ADM.users.map(u=>u.staff_id).filter(Boolean));
+  const when=t=>t?new Date(t).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Never';
+  const rows=ADM.users.map(u=>{const me=u.username===ADM.me;
+    const staffSel=`<select class="btn" data-adm-staff="${esc(u.username)}" aria-label="Staff record for ${esc(u.display_name)}" style="max-width:190px">
+      <option value="">No staff record</option>${ADM.staff.filter(s=>s.id===u.staff_id||!linked.has(s.id)).map(s=>`<option value="${esc(s.id)}" ${s.id===u.staff_id?'selected':''}>${esc(s.name)}</option>`).join('')}</select>`;
+    return `<tr class="${u.disabled?'off':''}"><td><b>${esc(u.display_name)}</b>${me?' <span class="muted">(you)</span>':''}</td><td>${esc(u.username)}</td><td>${staffSel}</td>
+      <td>${u.is_admin?'<span class="badge admin">Admin</span>':'<span class="badge">User</span>'} ${u.disabled?'<span class="badge">Turned off</span>':''} ${u.must_change&&!u.disabled?'<span class="badge warn">Temp password</span>':''}</td>
+      <td class="muted">${when(u.last_login)}</td>
+      <td><div class="acts"><button class="btn" data-adm="reset" data-u="${esc(u.username)}">Reset password</button>
+      ${me?'':`<button class="btn" data-adm="${u.is_admin?'unadmin':'admin'}" data-u="${esc(u.username)}">${u.is_admin?'Remove admin':'Make admin'}</button>
+      <button class="btn" data-adm="${u.disabled?'enable':'disable'}" data-u="${esc(u.username)}">${u.disabled?'Turn on':'Turn off'}</button>`}</div></td></tr>`;}).join('');
+  main.innerHTML=`<div class="adm"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px"><h1 style="flex:1">People and logins</h1>
+    <span class="muted">${ADM.users.filter(u=>!u.disabled).length} active of ${ADM.users.length}</span><button class="btn primary" data-adm="new">+ Add person</button></div>
+    <div style="overflow-x:auto"><table><thead><tr><th>Name</th><th>Username</th><th>Staff record (calendar)</th><th>Access</th><th>Last sign-in</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="muted" style="font-size:12px;margin-top:14px">Turning someone off signs them out everywhere and blocks sign-in; their appointments and history stay. A staff record is what puts a person on the Team view and in the invitee list.</p></div>`;
+  wireAdmin(main);
+}
+async function admCall(path,opt,okMsg){
+  try{const r=await EZ.api(path,opt);const j=await r.json().catch(()=>({}));
+    if(!r.ok){toast(typeof j.detail==='string'?j.detail:'That did not work');return null;}
+    if(okMsg)toast(okMsg);return j;}
+  catch(e){if(!(e&&e.code===401))toast('You need a connection for that.');return null;}
+}
+function showTempPw(name,username,pw){
+  let m=$('#modal');if(!m){m=document.createElement('div');m.id='modal';document.body.appendChild(m);}
+  m.innerHTML=`<div class="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="Temporary password" style="max-width:420px"><header><h2>Temporary password for ${esc(name)}</h2></header>
+    <div style="padding:16px 18px"><div class="muted" style="margin-bottom:10px">Username <b style="color:var(--text)">${esc(username)}</b>. This password is shown <b>once</b>; they choose their own the first time they sign in.</div>
+    <div class="pwbox" id="pwv">${esc(pw)}</div></div>
+    <div class="foot"><button class="btn" id="pwcopy">Copy username and password</button><button class="btn primary" id="pwdone">Done</button></div></div></div>`;
+  $('#pwcopy').onclick=async()=>{try{await navigator.clipboard.writeText(`https://ezlcal.alamark.com\nUsername: ${username}\nTemporary password: ${pw}`);toast('Copied');}catch(e){toast('Select the password and copy it');}};
+  $('#pwdone').onclick=()=>{m.remove();};
+}
+function newPersonSheet(){
+  let m=$('#modal');if(!m){m=document.createElement('div');m.id='modal';document.body.appendChild(m);}
+  const linked=new Set(ADM.users.map(u=>u.staff_id).filter(Boolean));
+  const free=ADM.staff.filter(s=>!linked.has(s.id)&&s.active);
+  m.innerHTML=`<div class="scrim" data-scrim><form class="sheet" role="dialog" aria-modal="true" aria-label="Add person" style="max-width:520px"><header><h2>Add person</h2><button type="button" class="btn icon" id="np_x" aria-label="Close">✕</button></header>
+    <div class="form">
+      <label class="l" for="np_name">Name</label><input type="text" id="np_name" required placeholder="First Last">
+      <label class="l" for="np_user">Username</label><input type="text" id="np_user" required autocapitalize="none" placeholder="first.last">
+      <label class="l" for="np_staff">Calendar</label><select id="np_staff">
+        <option value="__new">Add as a new staff member</option>
+        ${free.map(s=>`<option value="${esc(s.id)}">Link to existing: ${esc(s.name)}</option>`).join('')}
+        <option value="">No calendar (sign-in only)</option></select>
+      <label class="l" for="np_dept">Department</label><input type="text" id="np_dept" placeholder="e.g. Outside Sales">
+      <span></span><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="np_admin">Administrator (can add and manage people)</label>
+    </div><div class="foot"><button type="button" class="btn" id="np_cancel">Cancel</button><button class="btn primary" type="submit">Create login</button></div></form></div>`;
+  const nm=$('#np_name'),un=$('#np_user');let touched=false;
+  nm.oninput=()=>{if(touched)return;const p=nm.value.trim().toLowerCase().replace(/[^a-z0-9 ]/g,'').split(/\s+/).filter(Boolean);un.value=p.length>1?p[0]+'.'+p[p.length-1]:(p[0]||'');};
+  un.oninput=()=>{touched=true;};
+  const st=$('#np_staff'),dp=$('#np_dept');st.onchange=()=>{dp.disabled=st.value!=='__new';};
+  const close=()=>m.remove();$('#np_x').onclick=close;$('#np_cancel').onclick=close;
+  m.querySelector('form').onsubmit=async e=>{e.preventDefault();
+    const body={username:un.value.trim(),display_name:nm.value.trim(),is_admin:$('#np_admin').checked};
+    if(st.value==='__new')body.new_staff_dept=dp.value.trim();else if(st.value)body.staff_id=st.value;
+    const j=await admCall('/admin/users',{method:'POST',body:JSON.stringify(body)});
+    if(j){m.remove();ADM=null;loadAdmin();showTempPw(body.display_name,j.username,j.temp_password);
+      if(st.value==='__new')toast('New staff appear on the Team view after the next app refresh');}
+  };
+  nm.focus();
+}
+function wireAdmin(main){
+  main.querySelectorAll('[data-adm]').forEach(b=>b.onclick=async()=>{
+    const a=b.dataset.adm,u=b.dataset.u;
+    if(a==='reload'){ADM=null;render();return;}
+    if(a==='new'){newPersonSheet();return;}
+    const user=ADM.users.find(x=>x.username===u);
+    if(a==='reset'){if(!b.dataset.armed){b.dataset.armed='1';b.textContent='Tap again to reset';b.style.color='var(--red)';return;}
+      const j=await admCall('/admin/users/'+encodeURIComponent(u)+'/reset',{method:'POST'});if(j){showTempPw(user.display_name,u,j.temp_password);ADM=null;loadAdmin();}return;}
+    const patch={admin:{is_admin:true},unadmin:{is_admin:false},disable:{disabled:true},enable:{disabled:false}}[a];
+    if(a==='disable'&&!b.dataset.armed){b.dataset.armed='1';b.textContent='Tap again to turn off';b.style.color='var(--red)';return;}
+    const j=await admCall('/admin/users/'+encodeURIComponent(u),{method:'PATCH',body:JSON.stringify(patch)},{admin:'Now an admin',unadmin:'Admin removed',disable:'Turned off',enable:'Turned on'}[a]);
+    if(j){ADM=null;loadAdmin();}
+  });
+  main.querySelectorAll('[data-adm-staff]').forEach(sel=>sel.onchange=async()=>{
+    const u=sel.dataset.admStaff;const body=sel.value?{staff_id:sel.value}:{unlink_staff:true};
+    const j=await admCall('/admin/users/'+encodeURIComponent(u),{method:'PATCH',body:JSON.stringify(body)},'Staff record updated');
+    ADM=null;loadAdmin();
+  });
+}
 
 /* ---------- event detail + editor ---------- */
 function getEv(id){return events().find(e=>e.id===id);}

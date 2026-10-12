@@ -64,3 +64,8 @@ CREATE TABLE IF NOT EXISTS event_attendees (
   PRIMARY KEY (event_id, attendee_type, ref_id)
 );
 CREATE INDEX IF NOT EXISTS event_attendees_ref_idx ON event_attendees (attendee_type, ref_id);
+
+-- v2: admin area
+ALTER TABLE app_users ADD COLUMN IF NOT EXISTS disabled   boolean NOT NULL DEFAULT false;
+ALTER TABLE app_users ADD COLUMN IF NOT EXISTS last_login timestamptz;
+ALTER TABLE app_users ADD COLUMN IF NOT EXISTS created_by text;

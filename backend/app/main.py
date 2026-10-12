@@ -3,6 +3,9 @@ import datetime as dt
 import hashlib
 import json
 import os
+import re
+import secrets
+import string
 from pathlib import Path
 
 import bcrypt
@@ -37,10 +40,10 @@ def current_user(authorization: str = Header(default="")) -> dict:
         raise HTTPException(401, "Session expired, sign in again")
     with pool.connection() as c:
         u = c.execute(
-            "SELECT username, staff_id, display_name, must_change, is_admin FROM app_users WHERE username=%s", (sub,)
+            "SELECT username, staff_id, display_name, must_change, is_admin, disabled FROM app_users WHERE username=%s", (sub,)
         ).fetchone()
-    if not u:
-        raise HTTPException(401, "Account no longer exists")
+    if not u or u["disabled"]:
+        raise HTTPException(401, "This account is not active")
     return u
 
 
@@ -67,6 +70,10 @@ def login(body: LoginIn):
         u = c.execute("SELECT * FROM app_users WHERE lower(username)=lower(%s)", (body.username.strip(),)).fetchone()
     if not u or not bcrypt.checkpw(body.password.encode(), u["pw_hash"].encode()):
         raise HTTPException(401, "That username and password don't match")
+    if u["disabled"]:
+        raise HTTPException(401, "This account has been turned off. Ask your administrator.")
+    with pool.connection() as c:
+        c.execute("UPDATE app_users SET last_login=now() WHERE username=%s", (u["username"],))
     return {"token": make_token(u["username"]), "user": _public(u)}
 
 
@@ -199,3 +206,122 @@ def put_event(event_id: str, ev: EventIn, u: dict = Depends(current_user)):
                 )
         row = _event_rows(c, "WHERE id=%s", (event_id,))[0]
     return {"ok": True, "event": row}
+
+
+# ---------- admin ----------
+USERNAME_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{2,39}$")
+
+
+def admin_user(u: dict = Depends(current_user)) -> dict:
+    if not u["is_admin"]:
+        raise HTTPException(403, "Administrators only")
+    return u
+
+
+def _temp_password() -> str:
+    alphabet = string.ascii_letters + string.digits
+    return "-".join("".join(secrets.choice(alphabet) for _ in range(4)) for _ in range(3))
+
+
+def _hash(pw: str) -> str:
+    return bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+
+
+class UserCreate(BaseModel):
+    username: str
+    display_name: str
+    staff_id: str | None = None        # link to an existing staff member
+    new_staff_dept: str | None = None  # or create a new staff member (shows on calendars)
+    is_admin: bool = False
+
+
+class UserPatch(BaseModel):
+    display_name: str | None = None
+    staff_id: str | None = None
+    unlink_staff: bool = False
+    is_admin: bool | None = None
+    disabled: bool | None = None
+
+
+@app.get("/api/admin/users")
+def admin_list(u: dict = Depends(admin_user)):
+    with pool.connection() as c:
+        users = c.execute(
+            """SELECT a.username, a.display_name, a.staff_id, s.name AS staff_name, a.is_admin, a.disabled,
+                      a.must_change, a.created_at, a.last_login, a.created_by
+               FROM app_users a LEFT JOIN staff s ON s.id = a.staff_id ORDER BY a.display_name"""
+        ).fetchall()
+        staff = c.execute("SELECT id, name, dept, active FROM staff ORDER BY name").fetchall()
+    for x in users:
+        for k in ("created_at", "last_login"):
+            x[k] = x[k].isoformat() if x[k] else None
+    return {"users": users, "staff": staff, "me": u["username"]}
+
+
+@app.post("/api/admin/users")
+def admin_create(body: UserCreate, u: dict = Depends(admin_user)):
+    username = body.username.strip().lower()
+    name = body.display_name.strip()
+    if not USERNAME_RE.match(username):
+        raise HTTPException(400, "Username: 3-40 characters, lowercase letters, numbers, dot, dash or underscore")
+    if not name:
+        raise HTTPException(400, "Enter the person's name")
+    pw = _temp_password()
+    with pool.connection() as c, c.transaction():
+        if c.execute("SELECT 1 FROM app_users WHERE lower(username)=%s", (username,)).fetchone():
+            raise HTTPException(400, f"{username} already exists")
+        staff_id = body.staff_id or None
+        if staff_id:
+            if not c.execute("SELECT 1 FROM staff WHERE id=%s", (staff_id,)).fetchone():
+                raise HTTPException(400, "That staff member doesn't exist")
+            if c.execute("SELECT 1 FROM app_users WHERE staff_id=%s", (staff_id,)).fetchone():
+                raise HTTPException(400, "That staff member already has a login")
+        elif body.new_staff_dept is not None:
+            staff_id = "W" + secrets.token_hex(3).upper()   # web-created staff; FileMaker sync maps these later
+            c.execute("INSERT INTO staff (id,name,dept,active) VALUES (%s,%s,%s,true)",
+                      (staff_id, name, body.new_staff_dept.strip()[:60]))
+        c.execute(
+            """INSERT INTO app_users (username,staff_id,display_name,pw_hash,must_change,is_admin,created_by)
+               VALUES (%s,%s,%s,%s,true,%s,%s)""",
+            (username, staff_id, name, _hash(pw), body.is_admin, u["username"]),
+        )
+    return {"username": username, "temp_password": pw}
+
+
+@app.post("/api/admin/users/{username}/reset")
+def admin_reset(username: str, u: dict = Depends(admin_user)):
+    pw = _temp_password()
+    with pool.connection() as c:
+        n = c.execute("UPDATE app_users SET pw_hash=%s, must_change=true WHERE username=%s",
+                      (_hash(pw), username)).rowcount
+    if not n:
+        raise HTTPException(404, "No such user")
+    return {"username": username, "temp_password": pw}
+
+
+@app.patch("/api/admin/users/{username}")
+def admin_patch(username: str, body: UserPatch, u: dict = Depends(admin_user)):
+    if username == u["username"] and (body.disabled or body.is_admin is False):
+        raise HTTPException(400, "You can't turn off or remove admin from your own account")
+    sets, vals = [], []
+    if body.display_name is not None and body.display_name.strip():
+        sets.append("display_name=%s"); vals.append(body.display_name.strip())
+    if body.is_admin is not None:
+        sets.append("is_admin=%s"); vals.append(body.is_admin)
+    if body.disabled is not None:
+        sets.append("disabled=%s"); vals.append(body.disabled)
+    with pool.connection() as c, c.transaction():
+        if body.unlink_staff:
+            sets.append("staff_id=NULL")
+        elif body.staff_id:
+            if not c.execute("SELECT 1 FROM staff WHERE id=%s", (body.staff_id,)).fetchone():
+                raise HTTPException(400, "That staff member doesn't exist")
+            if c.execute("SELECT 1 FROM app_users WHERE staff_id=%s AND username<>%s", (body.staff_id, username)).fetchone():
+                raise HTTPException(400, "That staff member already has a login")
+            sets.append("staff_id=%s"); vals.append(body.staff_id)
+        if not sets:
+            return {"ok": True}
+        n = c.execute(f"UPDATE app_users SET {', '.join(sets)} WHERE username=%s", (*vals, username)).rowcount
+        if not n:
+            raise HTTPException(404, "No such user")
+    return {"ok": True}
