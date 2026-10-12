@@ -10,7 +10,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="EZLine">
-<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2">
 <link rel="icon" href="/icons/icon-192.png">
 <style>
 :root{
@@ -348,7 +348,7 @@ function render(){
     <span id="status" class="pill"></span>
     <button class="btn primary" data-new>+ New appointment</button>
     <button class="btn" data-signout title="Sign out">${esc(EZ.user.display_name.split(' ')[0])} · Sign out</button>
-    <button class="btn icon" data-theme aria-label="Switch light or dark mode"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+    <button class="btn icon" data-themebtn aria-label="Switch light or dark mode"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
   </header><main id="main"></main>`;
   const main=$('#main');
   if(S.view==='team') renderTeam(main);
@@ -358,12 +358,12 @@ function render(){
   if(S.modal) renderModal();
 }
 document.addEventListener('click',e=>{
-  const t=e.target.closest('[data-signout],[data-tab],[data-new],[data-theme],[data-open],[data-goto],[data-cal],[data-calmode],[data-slot],[data-team],[data-fam],[data-back]');
+  const t=e.target.closest('[data-signout],[data-tab],[data-new],[data-themebtn],[data-open],[data-goto],[data-cal],[data-calmode],[data-slot],[data-team],[data-fam],[data-back]');
   if(!t)return;
   if(t.hasAttribute('data-signout')){if(outbox.length&&!confirmOut())return;EZ.signOut();}
   else if(t.dataset.tab){go(t.dataset.tab);}
   else if(t.hasAttribute('data-new')){openEditor(null);}
-  else if(t.hasAttribute('data-theme')){const dark=matchMedia('(prefers-color-scheme: dark)').matches;const cur=theme||(dark?'dark':'light');theme=cur==='dark'?'light':'dark';ls.set(LS_THEME,theme);applyTheme();}
+  else if(t.hasAttribute('data-themebtn')){const dark=matchMedia('(prefers-color-scheme: dark)').matches;const cur=theme||(dark?'dark':'light');theme=cur==='dark'?'light':'dark';ls.set(LS_THEME,theme);applyTheme();}
   else if(t.dataset.open){openDetail(t.dataset.open);}
   else if(t.dataset.goto){const [k,i]=t.dataset.goto.split(':');S.modal=null;go(k,k,+i);}
   else if(t.dataset.cal){const n=+t.dataset.cal;if(n===0)S.calDate=new Date();else{const d=new Date(S.calDate);if(S.calMode==='month')d.setMonth(d.getMonth()+n);else d.setDate(d.getDate()+7*n);S.calDate=d;}render();}
