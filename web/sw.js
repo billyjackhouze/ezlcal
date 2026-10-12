@@ -1,6 +1,6 @@
 // ezlcal service worker: caches the app shell so it opens with no signal.
 // Data calls (/api/*) always go to the network; the app keeps its own offline copy and outbox.
-const VERSION = 'ezlcal-v1';
+const VERSION = 'ezlcal-v2';
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
