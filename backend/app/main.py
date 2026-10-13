@@ -103,26 +103,84 @@ def bootstrap(response: Response, if_none_match: str = Header(default=""), u: di
     with pool.connection() as c:
         stamp = c.execute(
             "SELECT (SELECT max(updated_at) FROM accounts)::text || (SELECT max(updated_at) FROM contacts)::text"
-            " || (SELECT count(*) FROM staff WHERE active)::text AS s"
+            " || (SELECT count(*) FROM staff WHERE active)::text || (SELECT count(*) FROM contact_accounts)::text"
+            " || coalesce((SELECT max(updated_at) FROM account_offices)::text,'') || 'v3' AS s"
         ).fetchone()["s"]
         etag = '"' + hashlib.sha1((stamp or "").encode()).hexdigest()[:16] + '"'
         if if_none_match == etag:
             return Response(status_code=304, headers={"ETag": etag})
         acc = c.execute(
-            "SELECT id,name,types,parent_id,root_id,sales_ytd,sales_py,quotes_ytd,last_order FROM accounts ORDER BY name"
+            "SELECT id,name,types,parent_id,root_id,sales_ytd,sales_py,quotes_ytd,last_order,address,city,state,zip,homepage"
+            " FROM accounts ORDER BY name"
         ).fetchall()
-        con = c.execute("SELECT id,name,account_id FROM contacts ORDER BY name").fetchall()
+        con = c.execute(
+            "SELECT id,name,account_id,title,email,phone_direct,phone_mobile,address,city,state,zip,linkedin,work_remote,active"
+            " FROM contacts ORDER BY name"
+        ).fetchall()
         stf = c.execute("SELECT id,name,dept FROM staff WHERE active ORDER BY name").fetchall()
+        lnk = c.execute("SELECT contact_id,account_id,sales_ytd,sales_py,quotes_ytd FROM contact_accounts").fetchall()
+        off = c.execute(
+            "SELECT id,account_id,office_type,address,city,state,zip,phone,email,notes,source FROM account_offices"
+            " WHERE NOT deleted ORDER BY office_type, city"
+        ).fetchall()
     response.headers["ETag"] = etag
     return {
         "accounts": [
             [a["id"], a["name"], a["types"], a["parent_id"], a["root_id"], float(a["sales_ytd"]),
-             float(a["sales_py"]), float(a["quotes_ytd"]), a["last_order"].isoformat() if a["last_order"] else None]
+             float(a["sales_py"]), float(a["quotes_ytd"]), a["last_order"].isoformat() if a["last_order"] else None,
+             a["address"], a["city"], a["state"], a["zip"], a["homepage"]]
             for a in acc
         ],
-        "contacts": [[x["id"], x["name"], x["account_id"]] for x in con],
+        "contacts": [[x["id"], x["name"], x["account_id"], x["title"], x["email"], x["phone_direct"], x["phone_mobile"],
+                      x["address"], x["city"], x["state"], x["zip"], x["linkedin"], x["work_remote"], x["active"]] for x in con],
         "staff": [[s["id"], s["name"], s["dept"]] for s in stf],
+        "links": [[l["contact_id"], l["account_id"], float(l["sales_ytd"]), float(l["sales_py"]), float(l["quotes_ytd"])] for l in lnk],
+        "offices": [[o["id"], o["account_id"], o["office_type"], o["address"], o["city"], o["state"], o["zip"], o["phone"],
+                     o["email"], o["notes"], o["source"]] for o in off],
     }
+
+
+# ---------- offices ----------
+class OfficeIn(BaseModel):
+    account_id: str
+    office_type: str = ""
+    address: str = ""
+    city: str = ""
+    state: str = ""
+    zip: str = ""
+    phone: str = ""
+    email: str = ""
+    notes: str = ""
+
+
+@app.put("/api/offices/{office_id}")
+def put_office(office_id: str, o: OfficeIn, u: dict = Depends(current_user)):
+    vals = [o.office_type.strip()[:60], o.address.strip()[:300], o.city.strip()[:120], o.state.strip()[:40],
+            o.zip.strip()[:20], o.phone.strip()[:60], o.email.strip()[:200], o.notes.strip()[:2000]]
+    if not any(vals[1:7]):
+        raise HTTPException(400, "Add at least an address, city, phone or email")
+    with pool.connection() as c, c.transaction():
+        if not c.execute("SELECT 1 FROM accounts WHERE id=%s", (o.account_id,)).fetchone():
+            raise HTTPException(400, "Unknown account")
+        c.execute(
+            """INSERT INTO account_offices (id,account_id,office_type,address,city,state,zip,phone,email,notes,source,updated_by,updated_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'web',%s,now())
+               ON CONFLICT (id) DO UPDATE SET office_type=EXCLUDED.office_type,address=EXCLUDED.address,city=EXCLUDED.city,
+                 state=EXCLUDED.state,zip=EXCLUDED.zip,phone=EXCLUDED.phone,email=EXCLUDED.email,notes=EXCLUDED.notes,
+                 source='web',deleted=false,updated_by=EXCLUDED.updated_by,updated_at=now()""",
+            (office_id, o.account_id, *vals, u["username"]),
+        )
+    return {"ok": True, "office": [office_id, o.account_id, *vals, "web"]}
+
+
+@app.delete("/api/offices/{office_id}")
+def delete_office(office_id: str, u: dict = Depends(current_user)):
+    with pool.connection() as c:
+        n = c.execute("UPDATE account_offices SET deleted=true, source='web', updated_by=%s, updated_at=now() WHERE id=%s",
+                      (u["username"], office_id)).rowcount
+    if not n:
+        raise HTTPException(404, "No such office")
+    return {"ok": True}
 
 
 # ---------- events ----------

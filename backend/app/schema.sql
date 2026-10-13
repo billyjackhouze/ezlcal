@@ -69,3 +69,63 @@ CREATE INDEX IF NOT EXISTS event_attendees_ref_idx ON event_attendees (attendee_
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS disabled   boolean NOT NULL DEFAULT false;
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS last_login timestamptz;
 ALTER TABLE app_users ADD COLUMN IF NOT EXISTS created_by text;
+
+-- v3: contact details, contact<->account links, offices, sync log
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS address  text NOT NULL DEFAULT '';
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS city     text NOT NULL DEFAULT '';
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS state    text NOT NULL DEFAULT '';
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS zip      text NOT NULL DEFAULT '';
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS homepage text NOT NULL DEFAULT '';
+ALTER TABLE accounts ADD COLUMN IF NOT EXISTS category text NOT NULL DEFAULT '';
+
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS title        text NOT NULL DEFAULT '';
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS email        text NOT NULL DEFAULT '';
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS phone_direct text NOT NULL DEFAULT '';
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS phone_mobile text NOT NULL DEFAULT '';
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS address      text NOT NULL DEFAULT '';   -- work address only; home address is never synced
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS city         text NOT NULL DEFAULT '';
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS state        text NOT NULL DEFAULT '';
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS zip          text NOT NULL DEFAULT '';
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS linkedin     text NOT NULL DEFAULT '';
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS work_remote  boolean NOT NULL DEFAULT false;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS active       boolean NOT NULL DEFAULT true;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS last_quote   date;
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS last_job     date;
+
+CREATE TABLE IF NOT EXISTS contact_accounts (      -- mirror of CRM_BuyerAccount (FileMaker owns it)
+  contact_id  text NOT NULL,
+  account_id  text NOT NULL,
+  sales_ytd   numeric NOT NULL DEFAULT 0,
+  sales_py    numeric NOT NULL DEFAULT 0,
+  quotes_ytd  numeric NOT NULL DEFAULT 0,
+  PRIMARY KEY (contact_id, account_id)
+);
+CREATE INDEX IF NOT EXISTS contact_accounts_account_idx ON contact_accounts (account_id);
+
+CREATE TABLE IF NOT EXISTS account_offices (
+  id           text PRIMARY KEY,                  -- FileMaker __Kp_CRMaccountOffice, or a UUID for app-created
+  account_id   text NOT NULL,
+  office_type  text NOT NULL DEFAULT '',
+  address      text NOT NULL DEFAULT '',
+  city         text NOT NULL DEFAULT '',
+  state        text NOT NULL DEFAULT '',
+  zip          text NOT NULL DEFAULT '',
+  phone        text NOT NULL DEFAULT '',
+  email        text NOT NULL DEFAULT '',
+  notes        text NOT NULL DEFAULT '',
+  source       text NOT NULL DEFAULT 'web' CHECK (source IN ('fm','web')),
+  deleted      boolean NOT NULL DEFAULT false,
+  updated_by   text,
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  updated_at   timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS account_offices_account_idx ON account_offices (account_id);
+
+CREATE TABLE IF NOT EXISTS sync_runs (
+  id          serial PRIMARY KEY,
+  mode        text NOT NULL,
+  started_at  timestamptz NOT NULL DEFAULT now(),
+  finished_at timestamptz,
+  ok          boolean,
+  summary     jsonb
+);

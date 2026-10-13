@@ -143,6 +143,10 @@ dl.kv dt{text-align:right;color:var(--sub)} dl.kv dd{margin:0}
   .backbtn{display:inline-flex!important}
 }
 .backbtn{display:none}
+.acctTop{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start}.acctInfo{flex:1 1 340px;min-width:0}.acctOffices{flex:0 1 300px;min-width:240px;margin-top:6px}
+.office{border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:8px;font-size:12.5px}
+.ctab{width:100%;border-collapse:collapse;min-width:640px}.ctab th{text-align:left;font-weight:500;color:var(--sub);font-size:12px;padding:7px 12px;border-bottom:1px solid var(--line)}
+.ctab td{padding:7px 12px;border-bottom:1px solid var(--line);font-size:12.5px;vertical-align:top}.ctab tr:last-child td{border-bottom:0}.ctab tr.inactive td{opacity:.55}
 .adm{flex:1;overflow:auto;padding:20px 24px}
 .adm table{width:100%;border-collapse:collapse;min-width:820px}
 .adm th{text-align:left;font-weight:500;color:var(--sub);font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line)}
@@ -228,12 +232,15 @@ async function start(){
   const fromServer=e=>({id:e.id,title:e.title,date:e.date,time:e.time||'',end:e.end||'',allDay:!e.time,cat:e.cat||'',loc:e.loc||'',notes:e.notes||'',deleted:!!e.deleted,att:toIdx(e.att),updatedAt:e.updatedAt,updatedBy:e.updatedBy});
   const toServer=e=>({id:e.id,title:e.title,date:e.date,time:e.time||'',end:e.end||'',cat:e.cat||'',loc:e.loc||'',notes:e.notes||'',deleted:!!e.deleted,updatedAt:e.updatedAt,att:(e.att||[]).map(([t,i])=>[t,K[t][i]])});
   const D={
-    accounts:boot.accounts.map(a=>[a[1],a[2]||'',a[3]!=null&&IX.a.has(a[3])?IX.a.get(a[3]):-1,a[4]!=null&&IX.a.has(a[4])?IX.a.get(a[4]):-1,a[5]||0,a[6]||0,a[7]||0,a[8]||'']),
-    contacts:boot.contacts.map(c=>[c[1],c[2]!=null&&IX.a.has(c[2])?IX.a.get(c[2]):-1]),
+    accounts:boot.accounts.map(a=>[a[1],a[2]||'',a[3]!=null&&IX.a.has(a[3])?IX.a.get(a[3]):-1,a[4]!=null&&IX.a.has(a[4])?IX.a.get(a[4]):-1,a[5]||0,a[6]||0,a[7]||0,a[8]||'',a[9]||'',a[10]||'',a[11]||'',a[12]||'',a[13]||'']),
+    contacts:boot.contacts.map(c=>[c[1],c[2]!=null&&IX.a.has(c[2])?IX.a.get(c[2]):-1,c[3]||'',c[4]||'',c[5]||'',c[6]||'',c[7]||'',c[8]||'',c[9]||'',c[10]||'',c[11]||'',!!c[12],c[13]!==false]),
+    links:(boot.links||[]).map(l=>[IX.c.has(String(l[0]))?IX.c.get(String(l[0])):-1,IX.a.has(l[1])?IX.a.get(l[1]):-1,l[2]||0,l[3]||0,l[4]||0]).filter(l=>l[0]>=0&&l[1]>=0),
+    offices:(boot.offices||[]).map(o=>({id:o[0],a:IX.a.has(o[1])?IX.a.get(o[1]):-1,type:o[2]||'',address:o[3]||'',city:o[4]||'',state:o[5]||'',zip:o[6]||'',phone:o[7]||'',email:o[8]||'',notes:o[9]||'',source:o[10]||'web'})).filter(o=>o.a>=0),
     staff:boot.staff.map(s=>[s[1],s[2]||'']),
     events:Object.values(raw).map(fromServer)
   };
-  window.__ezl={api,fromServer,toServer,signOut,user,meIdx:user.staff_id&&IX.s.has(user.staff_id)?IX.s.get(user.staff_id):-1,
+  window.__ezl={api,fromServer,toServer,signOut,user,akey:i=>K.a[i],
+    patchBootOffice(row,deleted){const b=g(B,null);if(!b)return;b.offices=(b.offices||[]).filter(o=>o[0]!==row[0]);if(!deleted)b.offices.push(row);p(B,b);},meIdx:user.staff_id&&IX.s.has(user.staff_id)?IX.s.get(user.staff_id):-1,
     cacheRaw(list){const r=g(EV,{});list.forEach(e=>r[e.id]=e);p(EV,r);},
     async pullSince(){const since=g(SN,'');const r=await api('/events'+(since?'?since='+encodeURIComponent(since):''));if(!r.ok)throw new Error('pull');const j=await r.json();
       if(j.events.length){const rr=g(EV,{});j.events.forEach(e=>rr[e.id]=e);p(EV,rr);}p(SN,j.serverTime);return j.events;}};
@@ -314,7 +321,10 @@ setTimeout(flush,400);
 
 /* ---------- indexes ---------- */
 const kids={}; ACC.forEach((a,i)=>{if(a[2]>=0){(kids[a[2]]=kids[a[2]]||[]).push(i);}});
-const conByAcct={}; CON.forEach((c,i)=>{if(c[1]>=0)(conByAcct[c[1]]=conByAcct[c[1]]||[]).push(i);});
+const conAccts=CON.map((c,i)=>new Set(c[1]>=0?[c[1]]:[]));
+const linkBy={}; D.links.forEach(l=>{conAccts[l[0]].add(l[1]);linkBy[l[1]+':'+l[0]]=l;});
+const conByAcct={}; conAccts.forEach((set,i)=>set.forEach(a=>(conByAcct[a]=conByAcct[a]||[]).push(i)));
+const OFF=D.offices; const offByAcct=a=>OFF.filter(o=>o.a===a);
 function family(i){const r=ACC[i][3]>=0?ACC[i][3]:i;const out=[];const walk=(n,d)=>{out.push([n,d]);(kids[n]||[]).sort((x,y)=>ACC[x][0].localeCompare(ACC[y][0])).forEach(k=>walk(k,d+1));};walk(r,0);return out;}
 const name=(t,i)=>t==='a'?(ACC[i]?ACC[i][0]:'Account'):t==='c'?(CON[i]?CON[i][0]:'Contact'):(STF[i]?STF[i][0]:'Staff');
 const acctOfContact=i=>CON[i]?CON[i][1]:-1;
@@ -322,7 +332,7 @@ function evFor(kind,i,withFamily){
   let accts=null;
   if(kind==='a'){accts=new Set(withFamily?family(i).map(x=>x[0]):[i]);}
   return events().filter(e=>e.att.some(([t,x])=>{
-    if(kind==='a') return (t==='a'&&accts.has(x))||(t==='c'&&accts.has(acctOfContact(x)));
+    if(kind==='a') return (t==='a'&&accts.has(x))||(t==='c'&&[...(conAccts[x]||[])].some(a=>accts.has(a)));
     return t===kind&&x===i;
   }));
 }
@@ -368,9 +378,10 @@ function render(){
   if(S.modal) renderModal();
 }
 document.addEventListener('click',e=>{
-  const t=e.target.closest('[data-signout],[data-tab],[data-new],[data-themebtn],[data-open],[data-goto],[data-cal],[data-calmode],[data-slot],[data-team],[data-fam],[data-back]');
+  const t=e.target.closest('[data-office],[data-signout],[data-tab],[data-new],[data-themebtn],[data-open],[data-goto],[data-cal],[data-calmode],[data-slot],[data-team],[data-fam],[data-back]');
   if(!t)return;
-  if(t.hasAttribute('data-signout')){if(outbox.length&&!confirmOut())return;EZ.signOut();}
+  if(t.dataset.office){openOffice(t.dataset.office);}
+  else if(t.hasAttribute('data-signout')){if(outbox.length&&!confirmOut())return;EZ.signOut();}
   else if(t.dataset.tab){go(t.dataset.tab);}
   else if(t.hasAttribute('data-new')){openEditor(null);}
   else if(t.hasAttribute('data-themebtn')){const dark=matchMedia('(prefers-color-scheme: dark)').matches;const cur=theme||(dark?'dark':'light');theme=cur==='dark'?'light':'dark';ls.set(LS_THEME,theme);applyTheme();}
@@ -471,7 +482,7 @@ function renderEntity(main,k){
   } else if(k==='c'){
     let idx=CON.map((c,i)=>i);if(q.length>=2)idx=idx.filter(i=>(CON[i][0]+' '+(CON[i][1]>=0?ACC[CON[i][1]][0]:'')).toLowerCase().includes(q));
     idx.sort((x,y)=>CON[x][0].localeCompare(CON[y][0]));
-    rows=idx.slice(0,400).map(i=>`<button class="row ${S.sel.c===i?'on':''}" data-goto="c:${i}"><div>${esc(CON[i][0])}</div><div class="s">${esc(CON[i][1]>=0?ACC[CON[i][1]][0]:'No account')}</div></button>`).join('');
+    rows=idx.slice(0,400).map(i=>`<button class="row ${S.sel.c===i?'on':''}" data-goto="c:${i}"><div>${esc(CON[i][0])}</div><div class="s">${esc([CON[i][2],CON[i][1]>=0?ACC[CON[i][1]][0]:'No account'].filter(Boolean).join(' · '))}</div></button>`).join('');
   } else {
     rows=STF.map((s,i)=>i).filter(i=>!q||STF[i][0].toLowerCase().includes(q)).map(i=>`<button class="row ${S.sel.s===i?'on':''}" data-goto="s:${i}"><div>${esc(STF[i][0])}</div><div class="s">${esc(STF[i][1])}</div></button>`).join('');
   }
@@ -488,26 +499,51 @@ function detailHtml(k,i){
     const a=ACC[i];const fam=family(i);const root=fam[0][0];
     const famTot=fam.reduce((t,[n])=>{t[0]+=ACC[n][4];t[1]+=ACC[n][5];t[2]+=ACC[n][6];return t;},[0,0,0]);
     const evs=evFor('a',i,S.fam);
-    const people=(conByAcct[i]||[]).slice(0,30);
+    const people=(conByAcct[i]||[]).slice().sort((x,y)=>{const lx=linkBy[i+':'+x],ly=linkBy[i+':'+y];return ((ly?ly[2]+ly[3]:0)-(lx?lx[2]+lx[3]:0))||CON[x][0].localeCompare(CON[y][0]);});
+    const offs=offByAcct(i);
+    const addr=[a[8],[a[9],a[10]].filter(Boolean).join(', ')+(a[11]?' '+a[11]:'')].filter(x=>x&&x.trim()).join('<br>');
+    const officeCard=o=>`<div class="office"><div style="display:flex;gap:8px;align-items:center"><span class="badge">${esc(o.type||'Office')}</span><span class="spacer"></span>
+        <button class="linkbtn muted" style="font-size:12px" data-office="${esc(o.id)}">Edit</button></div>
+        <div style="margin-top:5px">${esc(o.address)}${o.address?'<br>':''}${esc([o.city,o.state].filter(Boolean).join(', '))}${o.zip?' '+esc(o.zip):''}</div>
+        ${o.phone?`<div><a href="tel:${esc(o.phone.replace(/[^0-9+]/g,''))}">${esc(o.phone)}</a></div>`:''}${o.email?`<div><a href="mailto:${esc(o.email)}">${esc(o.email)}</a></div>`:''}
+        ${o.address||o.city?`<div><a target="_blank" rel="noopener" href="https://maps.apple.com/?q=${encodeURIComponent([o.address,o.city,o.state,o.zip].filter(Boolean).join(' '))}">Map</a></div>`:''}
+        ${o.notes?`<div class="muted" style="font-size:12px;margin-top:3px">${esc(o.notes)}</div>`:''}</div>`;
+    const tel=v=>v?`<a href="tel:${esc(v.replace(/[^0-9+]/g,''))}">${esc(v)}</a>`:'';
     return `<section class="detail pane">${back}
+      <div class="acctTop"><div class="acctInfo">
       <div style="display:flex;gap:14px;align-items:flex-start;margin-top:6px"><div style="width:56px;height:56px;border-radius:10px;background:var(--btnOn);display:flex;align-items:center;justify-content:center;flex:0 0 56px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--sub)" stroke-width="1.6" aria-hidden="true"><path d="M4 21V5l8-2v18M12 8h8v13M7 8h2M7 12h2M7 16h2M15 12h2M15 16h2M2 21h20"/></svg></div>
       <div><h1>${esc(a[0])}</h1><div class="muted" style="margin-top:3px">${fam.length>1?(root===i?'Root account with '+(fam.length-1)+' in family':'Part of the '+esc(ACC[root][0])+' family'):'Independent account'}</div>
       <div class="chips" style="margin-top:8px">${a[1].split('').filter(Boolean).map(c=>`<span class="chip">${TYPE[c]}</span>`).join('')}</div></div></div>
-      <dl class="kv"><dt>sales YTD</dt><dd><b>${money(a[4])}</b>${fam.length>1?` <span class="muted">· family ${money(famTot[0])}</span>`:''}</dd>
+      <dl class="kv">${addr?`<dt>main</dt><dd>${addr}</dd>`:''}${a[12]?`<dt>web</dt><dd><a target="_blank" rel="noopener" href="${esc(/^https?:/.test(a[12])?a[12]:'https://'+a[12])}">${esc(a[12])}</a></dd>`:''}
+      <dt>sales YTD</dt><dd><b>${money(a[4])}</b>${fam.length>1?` <span class="muted">· family ${money(famTot[0])}</span>`:''}</dd>
       <dt>prior year</dt><dd>${money(a[5])}${fam.length>1?` <span class="muted">· family ${money(famTot[1])}</span>`:''}</dd>
       <dt>quotes YTD</dt><dd>${money(a[6])}${fam.length>1?` <span class="muted">· family ${money(famTot[2])}</span>`:''}</dd>
       <dt>last order</dt><dd>${a[7]?fmtDate(a[7]):'—'}</dd>
-      ${a[2]>=0?`<dt>parent</dt><dd><button class="linkbtn" data-goto="a:${a[2]}" style="color:var(--accent)">${esc(ACC[a[2]][0])}</button></dd>`:''}</dl>
+      ${a[2]>=0?`<dt>parent</dt><dd><button class="linkbtn" data-goto="a:${a[2]}" style="color:var(--accent)">${esc(ACC[a[2]][0])}</button></dd>`:''}</dl></div>
+      <div class="acctOffices"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><b style="flex:1">Offices</b><button class="btn" data-office="new:${i}">+ Add office</button></div>
+        ${offs.length?offs.map(officeCard).join(''):'<div class="muted" style="font-size:12.5px;padding:8px 0">No offices yet. Add the HQ, accounting or sales office addresses here.</div>'}</div></div>
+      ${people.length?`<div class="box"><div class="boxhead"><b>Contacts</b><span class="muted">${people.length}</span><span class="spacer"></span></div><div style="overflow-x:auto"><table class="ctab"><thead><tr><th>Name</th><th>Mobile</th><th>Direct</th><th>Email</th><th class="num">Sales YTD</th><th class="num">Prior yr</th><th class="num">Quotes YTD</th></tr></thead><tbody>
+        ${people.map(c=>{const C=CON[c],L=linkBy[i+':'+c];return `<tr class="${C[12]?'':'inactive'}"><td><button class="linkbtn" data-goto="c:${c}"><b>${esc(C[0])}</b></button>${C[2]?`<div class="muted" style="font-size:12px">${esc(C[2])}</div>`:''}</td><td>${tel(C[5])}</td><td>${tel(C[4])}</td><td>${C[3]?`<a href="mailto:${esc(C[3])}">${esc(C[3])}</a>`:''}</td><td class="num">${L&&L[2]?money(L[2]):''}</td><td class="num">${L&&L[3]?money(L[3]):''}</td><td class="num">${L&&L[4]?money(L[4]):''}</td></tr>`;}).join('')}</tbody></table></div></div>`:''}
       ${fam.length>1?`<div class="box"><div class="boxhead"><b>Company family</b><span class="muted">parent, children and grandchildren</span><span class="spacer"></span><span class="muted" style="font-size:12px;width:86px;text-align:right">Sales YTD</span><span class="muted" style="font-size:12px;width:92px;text-align:right">Last order</span></div>
         <div style="max-height:320px;overflow:auto">${fam.map(([n,d])=>`<div class="frow" style="${n===i?'background:var(--btnOn)':''}"><span style="width:${d*16}px;flex:0 0 ${d*16}px"></span><span class="muted" style="width:14px">${d?'└':'◆'}</span><button class="linkbtn" data-goto="a:${n}" style="flex:1;min-width:0;${d?'':'font-weight:600'}">${esc(ACC[n][0])}</button><span class="num" style="width:86px">${money(ACC[n][4])}</span><span class="num muted" style="width:92px">${ACC[n][7]?fmtDate(ACC[n][7]):'—'}</span></div>`).join('')}</div></div>`:''}
-      ${people.length?`<div class="box"><div class="boxhead"><b>Contacts</b><span class="muted">${(conByAcct[i]||[]).length} on file in this demo</span></div><div style="padding:10px 14px" class="chips">${people.map(c=>`<button class="chip c" data-goto="c:${c}">${esc(CON[c][0])}</button>`).join('')}</div></div>`:''}
     </section><aside class="activity pane"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">All activity</b>${fam.length>1?`<label class="muted" style="font-size:12px;display:flex;gap:6px;align-items:center"><input type="checkbox" data-fam ${S.fam?'checked':''}>Whole family</label>`:''}</div>${timeline(evs)}</aside>`;
   }
   if(k==='c'){
     const c=CON[i];const evs=evFor('c',i);
-    return `<section class="detail pane">${back}<h1 style="margin-top:6px">${esc(c[0])}</h1>
+    const tel=v=>v?`<a href="tel:${esc(v.replace(/[^0-9+]/g,''))}">${esc(v)}</a>`:'—';
+    const accts=[...conAccts[i]].sort((x,y)=>{const lx=linkBy[x+':'+i],ly=linkBy[y+':'+i];return (ly?ly[2]+ly[3]:0)-(lx?lx[2]+lx[3]:0);});
+    const addr=[c[6],[c[7],c[8]].filter(Boolean).join(', ')+(c[9]?' '+c[9]:'')].filter(x=>x&&x.trim()).join('<br>');
+    return `<section class="detail pane">${back}<div style="display:flex;gap:14px;align-items:flex-start;margin-top:6px">
+      <div style="width:56px;height:56px;border-radius:28px;background:var(--btnOn);display:flex;align-items:center;justify-content:center;flex:0 0 56px;font-weight:600;font-size:18px;color:var(--sub)">${esc(c[0].split(' ').map(x=>x[0]).join('').slice(0,2))}</div>
+      <div><h1>${esc(c[0])}</h1>${c[2]?`<div class="muted">${esc(c[2])}</div>`:''}<div class="chips" style="margin-top:6px">${c[12]?'':'<span class="chip">Inactive</span>'}${c[11]?'<span class="chip">Works remote</span>':''}</div></div></div>
       <dl class="kv"><dt>account</dt><dd>${c[1]>=0?`<button class="linkbtn" data-goto="a:${c[1]}" style="color:var(--accent)">${esc(ACC[c[1]][0])}</button>`:'—'}</dd>
-      <dt>appointments</dt><dd>${evs.length}</dd></dl></section><aside class="activity pane"><b>All activity</b>${timeline(evs)}</aside>`;
+      <dt>mobile</dt><dd>${tel(c[5])}</dd><dt>direct</dt><dd>${tel(c[4])}</dd>
+      <dt>email</dt><dd>${c[3]?`<a href="mailto:${esc(c[3])}">${esc(c[3])}</a>`:'—'}</dd>
+      ${addr?`<dt>work</dt><dd>${addr}</dd>`:''}${c[10]?`<dt>LinkedIn</dt><dd><a target="_blank" rel="noopener" href="${esc(/^https?:/.test(c[10])?c[10]:'https://'+c[10])}">Profile</a></dd>`:''}
+      <dt>appointments</dt><dd>${evs.length}</dd></dl>
+      ${accts.length?`<div class="box"><div class="boxhead"><b>Accounts</b><span class="muted">${accts.length}</span><span class="spacer"></span><span class="muted" style="font-size:12px;width:86px;text-align:right">Sales YTD</span><span class="muted" style="font-size:12px;width:86px;text-align:right">Prior yr</span></div>
+        ${accts.map(a=>{const L=linkBy[a+':'+i];return `<div class="frow"><button class="linkbtn" data-goto="a:${a}" style="flex:1;min-width:0">${esc(ACC[a][0])}${a===c[1]?' <span class="muted">(current)</span>':''}</button><span class="num" style="width:86px">${L&&L[2]?money(L[2]):'—'}</span><span class="num" style="width:86px">${L&&L[3]?money(L[3]):'—'}</span></div>`;}).join('')}</div>`:''}
+      </section><aside class="activity pane"><b>All activity</b>${timeline(evs)}</aside>`;
   }
   const s=STF[i];const evs=evFor('s',i);const up=evs.filter(e=>e.date>=TODAY).length;
   const acctCount=new Set();evs.forEach(e=>e.att.forEach(([t,x])=>{if(t==='a')acctCount.add(x);}));
@@ -517,6 +553,44 @@ function detailHtml(k,i){
     </section><aside class="activity pane"><b>All activity</b>${timeline(evs)}</aside>`;
 }
 document.addEventListener('change',e=>{if(e.target.matches('[data-fam]')){S.fam=e.target.checked;render();}});
+
+/* ---------- offices ---------- */
+const OFFICE_TYPES=['Headquarters','Admin','Accounting','Sales','Engineering','Field / Yard','Shipping & Receiving','Other'];
+function openOffice(ref){
+  let o,acct;
+  if(ref.startsWith('new:')){acct=+ref.slice(4);o={id:uuid(),a:acct,type:'Headquarters',address:'',city:'',state:'',zip:'',phone:'',email:'',notes:'',isNew:true};}
+  else{const f=OFF.find(x=>x.id===ref);if(!f)return;o=Object.assign({},f);acct=o.a;}
+  let m=$('#modal');if(!m){m=document.createElement('div');m.id='modal';document.body.appendChild(m);}
+  const types=OFFICE_TYPES.includes(o.type)||!o.type?OFFICE_TYPES:[o.type].concat(OFFICE_TYPES);
+  m.innerHTML=`<div class="scrim" data-scrim><form class="sheet" role="dialog" aria-modal="true" aria-label="Office" style="max-width:540px"><header><h2>${o.isNew?'Add office':'Edit office'} · ${esc(ACC[acct][0])}</h2><button type="button" class="btn icon" id="of_x" aria-label="Close">✕</button></header>
+    ${navigator.onLine?'':'<div style="padding:9px 16px;background:var(--warnBg);color:var(--warnFg)">Offices need a connection to save. Try again when you are back online.</div>'}
+    <div class="form">
+      <label class="l" for="of_type">Type</label><select id="of_type">${types.map(t=>`<option ${t===o.type?'selected':''}>${esc(t)}</option>`).join('')}</select>
+      <label class="l" for="of_addr">Address</label><input type="text" id="of_addr" value="${esc(o.address)}" placeholder="Street, suite">
+      <label class="l" for="of_city">City / ST / Zip</label><div style="display:flex;gap:8px"><input type="text" id="of_city" value="${esc(o.city)}" placeholder="City" style="flex:1;min-width:0"><input type="text" id="of_state" value="${esc(o.state)}" placeholder="ST" style="width:60px"><input type="text" id="of_zip" value="${esc(o.zip)}" placeholder="Zip" style="width:90px" inputmode="numeric"></div>
+      <label class="l" for="of_phone">Phone</label><input type="text" id="of_phone" value="${esc(o.phone)}" inputmode="tel" placeholder="Main line for this office">
+      <label class="l" for="of_email">Email</label><input type="text" id="of_email" value="${esc(o.email)}" inputmode="email" placeholder="e.g. ap@company.com">
+      <label class="l" for="of_notes" style="align-self:start;padding-top:7px">Notes</label><textarea id="of_notes" rows="3" placeholder="Hours, gate code, who to ask for">${esc(o.notes)}</textarea>
+    </div><div class="foot">${o.isNew?'':'<button type="button" class="btn" id="of_del" style="margin-right:auto">Delete</button>'}<button type="button" class="btn" id="of_cancel">Cancel</button><button class="btn primary" type="submit">Save office</button></div></form></div>`;
+  const close=()=>m.remove();$('#of_x').onclick=close;$('#of_cancel').onclick=close;
+  m.querySelector('[data-scrim]').onclick=ev=>{if(ev.target===ev.currentTarget)close();};
+  const save=async(deleted)=>{
+    if(!navigator.onLine){toast('Offices need a connection to save');return;}
+    const body={account_id:EZ.akey(acct),office_type:$('#of_type').value,address:$('#of_addr').value,city:$('#of_city').value,state:$('#of_state').value,zip:$('#of_zip').value,phone:$('#of_phone').value,email:$('#of_email').value,notes:$('#of_notes').value};
+    try{
+      const r=deleted?await EZ.api('/offices/'+encodeURIComponent(o.id),{method:'DELETE'}):await EZ.api('/offices/'+encodeURIComponent(o.id),{method:'PUT',body:JSON.stringify(body)});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok){toast(typeof j.detail==='string'?j.detail:'Could not save the office');return;}
+      const k=OFF.findIndex(x=>x.id===o.id);if(k>=0)OFF.splice(k,1);
+      if(!deleted){OFF.push({id:o.id,a:acct,type:body.office_type,address:body.address,city:body.city,state:body.state,zip:body.zip,phone:body.phone,email:body.email,notes:body.notes,source:'web'});EZ.patchBootOffice(j.office,false);}
+      else EZ.patchBootOffice([o.id],true);
+      close();render();toast(deleted?'Office removed':'Office saved');
+    }catch(e){if(!(e&&e.code===401))toast('No connection. The office was not saved.');}
+  };
+  m.querySelector('form').onsubmit=e=>{e.preventDefault();save(false);};
+  const del=$('#of_del');if(del)del.onclick=()=>{if(!del.dataset.armed){del.dataset.armed='1';del.textContent='Tap again to delete';del.style.color='var(--red)';return;}save(true);};
+  $('#of_addr').focus();
+}
 
 /* ---------- admin ---------- */
 let ADM=null, admBusy=false;
