@@ -1,9 +1,10 @@
-"""Sync quotes and jobs from FileMaker SCHEDULE layout into Postgres.
+"""Sync quotes and jobs from FileMaker API_SCHEDULE layout into Postgres.
 
   python -m app.sync_quotes          sync last 3 years
   python -m app.sync_quotes --full   sync all records
 
-Uses SCHEDULE layout. Quotes: QUOTE='QUOTE', Jobs: Watch JOB='JOB'.
+Uses API_SCHEDULE layout (minimal fields, fast pagination).
+Quotes: QUOTE='QUOTE', Jobs: Watch JOB='JOB'.
 Links to accounts via _Kf_Customer -> CRM_accounts.z_Kf_Customer.
 """
 import json, os, sys, time, ssl, urllib.request, urllib.parse
@@ -111,7 +112,6 @@ def ensure_schema(c):
 
 
 def build_cust_map(host, db, token):
-    """Build numeric customer ID -> account UUID map from API_CRM_Accounts."""
     cust_map = {}
     offset = 1
     print("Building customer ID map...")
@@ -132,68 +132,28 @@ def build_cust_map(host, db, token):
 
 
 def fetch_schedule(host, db, token, full=False):
-    """Use FileMaker _find to fetch only recent records server-side."""
-    rows = []
-    cutoff = datetime.now() - timedelta(days=365 * CUTOFF_YEARS)
-    cutoff_str = cutoff.strftime("%m/%d/%Y")
-    ctx = ssl.create_default_context()
-
-    if full:
-        # Full fetch — paginate GET
-        offset = 1
-        print("Fetching ALL SCHEDULE records (this may take a while)...")
-        while True:
-            data = _get_page(host, db, token, "SCHEDULE", offset)
-            records = data.get("response", {}).get("data", [])
-            for rec in records:
-                rows.append(rec.get("fieldData", {}))
-            if len(records) < PAGE:
-                break
-            offset += PAGE
-            print(f"  {len(rows)} fetched...")
-    else:
-        # Use _find to filter by date server-side — much faster
-        url = (f"{host}/fmi/data/v1/databases/{urllib.parse.quote(db)}"
-               f"/layouts/SCHEDULE/_find")
-        # Search for records with QUOTE_DATE or JOB_DATE >= cutoff
-        # FileMaker find: ">=" prefix means "greater than or equal"
-        # Try QUOTE_DATE only - most records are quotes
-        # JOB_DATE and DATE SHIPPED are less reliable on this table
-        queries = [
-            {"QUOTE_DATE": f">={cutoff_str}"},
-        ]
-        print(f"Fetching SCHEDULE records since {cutoff_str} (server-side filter, 5 min timeout)...")
-        seen = set()
-        for query in queries:
-            offset = 1
-            while True:
-                body = json.dumps({
-                    "query": [query],
-                    "limit": PAGE,
-                    "offset": offset,
-                }).encode()
-                req = urllib.request.Request(url, method="POST", data=body,
-                      headers={"Authorization": f"Bearer {token}",
-                               "Content-Type": "application/json"})
-                try:
-                    with urllib.request.urlopen(req, timeout=300, context=ctx) as r:
-                        data = json.loads(r.read())
-                except urllib.error.HTTPError as e:
-                    err = e.read().decode("utf-8", "replace")
-                    if e.code == 401 or '"401"' in err:
-                        break  # no records found for this query
-                    raise SystemExit(f"FM find error: {err[:200]}")
-                records = data.get("response", {}).get("data", [])
-                for rec in records:
-                    fd = rec.get("fieldData", {})
-                    rec_id = s(fd.get("JOB_NUMBER")) + "_" + s(fd.get("_Kf_Customer"))
-                    if rec_id not in seen:
-                        seen.add(rec_id)
-                        rows.append(fd)
-                if len(records) < PAGE:
-                    break
-                offset += PAGE
-        print(f"  {len(rows)} unique records found")
+    """Fetch from API_SCHEDULE — minimal layout, fast pagination with client-side date filter."""
+    cutoff = datetime.now().date() - timedelta(days=365 * CUTOFF_YEARS)
+    rows, offset, scanned = [], 1, 0
+    print(f"Fetching API_SCHEDULE ({'all' if full else f'last {CUTOFF_YEARS} years'})...")
+    while True:
+        data = _get_page(host, db, token, "API_SCHEDULE", offset)
+        records = data.get("response", {}).get("data", [])
+        scanned += len(records)
+        for rec in records:
+            fd = rec.get("fieldData", {})
+            if not full:
+                qd = parse_date(fd.get("QUOTE_DATE"))
+                jd = parse_date(fd.get("JOB_DATE") or fd.get("DATE SHIPPED"))
+                best = jd or qd
+                if best and best < cutoff:
+                    continue
+            rows.append(fd)
+        if len(records) < PAGE:
+            break
+        offset += PAGE
+        print(f"  scanned {scanned}, kept {len(rows)}...")
+    print(f"  {scanned} total scanned, {len(rows)} in date range")
     return rows
 
 
@@ -206,7 +166,7 @@ def run(full=False):
     token = _login(host, db, user, pw)
     try:
         cust_map = build_cust_map(host, db, token)
-        schedule_rows = fetch_schedule(host, db, token, full=full)
+        schedule_rows = fetch_schedule(host, db, token, full)
     finally:
         _logout(host, db, token)
 
@@ -219,21 +179,14 @@ def run(full=False):
         if not job_num:
             skip += 1
             continue
-
-        quote_date = parse_date(r.get("QUOTE_DATE"))
-        job_date = parse_date(r.get("JOB_DATE") or r.get("DATE SHIPPED"))
-        best_date = job_date or quote_date
-
-        if not full and best_date and best_date < cutoff:
-            skip += 1
-            continue
-
         fm_cust_id = s(r.get("_Kf_Customer"))
         account_id = cust_map.get(fm_cust_id)
         if not account_id:
             skip += 1
             continue
 
+        quote_date = parse_date(r.get("QUOTE_DATE"))
+        job_date = parse_date(r.get("JOB_DATE") or r.get("DATE SHIPPED"))
         record_type = "quote" if s(r.get("QUOTE")) == "QUOTE" else "job"
         row_id = f"{job_num}_{fm_cust_id}_{record_type}"
 
