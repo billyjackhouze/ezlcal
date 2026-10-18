@@ -341,6 +341,69 @@ def put_event(event_id: str, ev: EventIn, u: dict = Depends(current_user)):
 
 
 
+
+
+# ---------- quotes and jobs ----------
+@app.get("/api/accounts/{account_id}/quotes")
+def get_quotes(account_id: str, u: dict = Depends(current_user)):
+    """Return quotes for an account from the last 3 years."""
+    with pool.connection() as c:
+        rows = c.execute("""
+            SELECT job_number, quote_date, job_date, sales_person,
+                   buyer_name, customer_name, project, total_amount,
+                   record_type, fm_customer_id
+            FROM account_quotes
+            WHERE account_id = %s
+              AND (quote_date >= now() - interval '3 years'
+                   OR job_date >= now() - interval '3 years')
+              AND record_type = 'quote'
+            ORDER BY quote_date DESC NULLS LAST, job_date DESC NULLS LAST
+            LIMIT 200
+        """, (account_id,)).fetchall()
+        # year totals
+        totals = c.execute("""
+            SELECT extract(year from coalesce(job_date, quote_date))::int AS yr,
+                   sum(total_amount) AS total
+            FROM account_quotes
+            WHERE account_id = %s AND record_type = 'quote'
+              AND coalesce(job_date, quote_date) >= now() - interval '3 years'
+            GROUP BY yr ORDER BY yr DESC
+        """, (account_id,)).fetchall()
+    return {
+        "rows": [dict(r) for r in rows],
+        "totals": {str(int(t["yr"])): float(t["total"] or 0) for t in totals if t["yr"]}
+    }
+
+
+@app.get("/api/accounts/{account_id}/jobs")
+def get_jobs(account_id: str, u: dict = Depends(current_user)):
+    """Return jobs for an account from the last 3 years."""
+    with pool.connection() as c:
+        rows = c.execute("""
+            SELECT job_number, quote_date, job_date, sales_person,
+                   buyer_name, customer_name, project, total_amount,
+                   record_type, fm_customer_id
+            FROM account_quotes
+            WHERE account_id = %s
+              AND (quote_date >= now() - interval '3 years'
+                   OR job_date >= now() - interval '3 years')
+              AND record_type = 'job'
+            ORDER BY job_date DESC NULLS LAST, quote_date DESC NULLS LAST
+            LIMIT 200
+        """, (account_id,)).fetchall()
+        totals = c.execute("""
+            SELECT extract(year from coalesce(job_date, quote_date))::int AS yr,
+                   sum(total_amount) AS total
+            FROM account_quotes
+            WHERE account_id = %s AND record_type = 'job'
+              AND coalesce(job_date, quote_date) >= now() - interval '3 years'
+            GROUP BY yr ORDER BY yr DESC
+        """, (account_id,)).fetchall()
+    return {
+        "rows": [dict(r) for r in rows],
+        "totals": {str(int(t["yr"])): float(t["total"] or 0) for t in totals if t["yr"]}
+    }
+
 # ---------- map ----------
 @app.get("/api/map")
 def get_map(u: dict = Depends(current_user)):

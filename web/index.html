@@ -254,7 +254,7 @@ async function start(){
     staff:boot.staff.map(s=>[s[1],s[2]||'']),
     events:Object.values(raw).map(fromServer)
   };
-  window.__ezl={api,fromServer,toServer,signOut,user,akey:i=>K.a[i],
+  window.__ezl={api,fromServer,toServer,signOut,user,akey:i=>K.a[i],_qcache:{},_jcache:{},
     patchBootOffice(row,deleted){const b=g(B,null);if(!b)return;b.offices=(b.offices||[]).filter(o=>o[0]!==row[0]);if(!deleted)b.offices.push(row);p(B,b);},meIdx:user.staff_id&&IX.s.has(user.staff_id)?IX.s.get(user.staff_id):-1,
     cacheRaw(list){const r=g(EV,{});list.forEach(e=>r[e.id]=e);p(EV,r);},
     async pullSince(){const since=g(SN,'');const r=await api('/events'+(since?'?since='+encodeURIComponent(since):''));if(!r.ok)throw new Error('pull');const j=await r.json();
@@ -359,6 +359,37 @@ function applyTheme(){ if(theme)document.documentElement.dataset.theme=theme; el
 applyTheme();
 function go(view,kind,i){S.view=view; if(kind)S.sel[kind]=i; render(); const m=$('main'); if(m)m.scrollTop=0;}
 window.__go=go;
+function loadQuotesJobs(acctIdx){
+  const aid=K.a[acctIdx];
+  if(!aid)return;
+  ['q','j'].forEach(t=>{
+    const box=document.getElementById(t+'box_'+acctIdx);
+    if(!box)return;
+    const cache=t==='q'?EZ._qcache:EZ._jcache;
+    if(cache[aid]){renderQJBox(box,cache[aid],t==='q');return;}
+    EZ.api('/'+(t==='q'?'accounts':'accounts')+'/'+encodeURIComponent(aid)+'/'+(t==='q'?'quotes':'jobs')).then(r=>r.json()).then(j=>{
+      cache[aid]=j;renderQJBox(box,j,t==='q');
+    }).catch(()=>{box.innerHTML='<div class="boxhead"><b>'+(t==='q'?'Quotes':'Jobs')+'</b></div><div class="muted" style="padding:10px 14px">Could not load</div>';});
+  });
+}
+function renderQJBox(box,data,isQuote){
+  const label=isQuote?'Quotes':'Jobs';
+  const rows=data.rows||[];
+  const totals=data.totals||{};
+  const yrs=Object.keys(totals).sort((a,b)=>b-a).slice(0,4);
+  const money=n=>n?'$'+Math.round(n).toLocaleString('en-US'):'—';
+  const fmtD=s=>{if(!s)return'';try{const p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString('en-US',{month:'numeric',day:'numeric',year:'numeric'});}catch(e){return s;}};
+  const dateField=isQuote?'quote_date':'job_date';
+  let html='<div class="boxhead"><b>'+label+'</b><span class="muted">'+rows.length+'</span><span class="spacer"></span></div>';
+  if(!rows.length){html+='<div class="muted" style="padding:10px 14px">No '+label.toLowerCase()+' in the last 3 years</div>';}
+  else{
+    html+='<div style="overflow-x:auto"><table class="ctab"><thead><tr><th>Date</th><th>Job #</th><th>Sales</th><th>Buyer</th><th>Customer</th><th>Project</th><th class="num">Total</th></tr></thead><tbody>';
+    html+=rows.map(r=>'<tr><td>'+esc(fmtD(r[dateField]||r.quote_date||r.job_date))+'</td><td>'+esc(r.job_number)+'</td><td>'+esc(r.sales_person)+'</td><td>'+esc(r.buyer_name)+'</td><td>'+esc(r.customer_name)+'</td><td>'+esc(r.project)+'</td><td class="num">'+money(r.total_amount)+'</td></tr>').join('');
+    html+='</tbody></table></div>';
+    if(yrs.length){html+='<div style="padding:8px 14px;display:flex;gap:18px;flex-wrap:wrap">'+yrs.map(y=>'<span><span class="muted">'+y+'</span> <b style="color:var(--green)">'+money(totals[y])+'</b></span>').join('')+'</div>';}
+  }
+  box.innerHTML=html;
+}
 
 /* ---------- render ---------- */
 function renderStatus(){
@@ -392,6 +423,7 @@ function render(){
   else renderEntity(main,S.view);
   renderStatus();
   if(S.modal) renderModal();
+  if(S.view==='a'&&S.sel.a>=0)setTimeout(()=>loadQuotesJobs(S.sel.a),0);
 }
 document.addEventListener('click',e=>{
   const t=e.target.closest('[data-office],[data-signout],[data-tab],[data-new],[data-themebtn],[data-open],[data-goto],[data-cal],[data-calmode],[data-slot],[data-team],[data-fam],[data-back]');
@@ -540,7 +572,8 @@ function detailHtml(k,i){
         ${offs.length?offs.map(officeCard).join(''):'<div class="muted" style="font-size:12.5px;padding:8px 0">No offices yet. Add the HQ, accounting or sales office addresses here.</div>'}</div></div>
       ${people.length?`<div class="box"><div class="boxhead"><b>Contacts</b><span class="muted">${people.length}</span><span class="spacer"></span><button class="btn" style="height:26px;padding:0 9px;font-size:12px" onclick="openNewContact(${i})">+ Add contact</button></div><div style="overflow-x:auto"><table class="ctab"><thead><tr><th>Name</th><th>Mobile</th><th>Direct</th><th>Email</th><th class="num">Sales YTD</th><th class="num">Prior yr</th><th class="num">Quotes YTD</th></tr></thead><tbody>
         ${people.map(c=>{const C=CON[c],L=linkBy[i+':'+c];return `<tr class="${C[12]?'':'inactive'}"><td><button class="linkbtn" data-goto="c:${c}"><b>${esc(C[0])}</b></button>${C[2]?`<div class="muted" style="font-size:12px">${esc(C[2])}</div>`:''}</td><td>${tel(C[5])}</td><td>${tel(C[4])}</td><td>${C[3]?`<a href="mailto:${esc(C[3])}">${esc(C[3])}</a>`:''}</td><td class="num">${L&&L[2]?money(L[2]):''}</td><td class="num">${L&&L[3]?money(L[3]):''}</td><td class="num">${L&&L[4]?money(L[4]):''}</td></tr>`;}).join('')}</tbody></table></div></div>`:''}
-      ${fam.length>1?`<div class="box"><div class="boxhead"><b>Company family</b><span class="muted">parent, children and grandchildren</span><span class="spacer"></span><span class="muted" style="font-size:12px;width:86px;text-align:right">Sales YTD</span><span class="muted" style="font-size:12px;width:92px;text-align:right">Last order</span></div>
+      ${(()=>{const qbox='<div class="box" id="qbox_'+i+'"><div class="boxhead"><b>Quotes</b><span class="spacer"></span></div><div class="empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div>';const jbox='<div class="box" id="jbox_'+i+'"><div class="boxhead"><b>Jobs</b><span class="spacer"></span></div><div class="empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div>';return qbox+jbox;})()}
+    ${fam.length>1?`<div class="box"><div class="boxhead"><b>Company family</b><span class="muted">parent, children and grandchildren</span><span class="spacer"></span><span class="muted" style="font-size:12px;width:86px;text-align:right">Sales YTD</span><span class="muted" style="font-size:12px;width:92px;text-align:right">Last order</span></div>
         <div style="max-height:320px;overflow:auto">${fam.map(([n,d])=>`<div class="frow" style="${n===i?'background:var(--btnOn)':''}"><span style="width:${d*16}px;flex:0 0 ${d*16}px"></span><span class="muted" style="width:14px">${d?'└':'◆'}</span><button class="linkbtn" data-goto="a:${n}" style="flex:1;min-width:0;${d?'':'font-weight:600'}">${esc(ACC[n][0])}</button><span class="num" style="width:86px">${money(ACC[n][4])}</span><span class="num muted" style="width:92px">${ACC[n][7]?fmtDate(ACC[n][7]):'—'}</span></div>`).join('')}</div></div>`:''}
     </section><aside class="activity pane"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">All activity</b>${fam.length>1?`<label class="muted" style="font-size:12px;display:flex;gap:6px;align-items:center"><input type="checkbox" data-fam ${S.fam?'checked':''}>Whole family</label>`:''}</div>${timeline(evs)}</aside>`;
   }
