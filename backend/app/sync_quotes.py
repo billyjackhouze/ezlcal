@@ -157,12 +157,12 @@ def fetch_schedule(host, db, token, full=False):
                f"/layouts/SCHEDULE/_find")
         # Search for records with QUOTE_DATE or JOB_DATE >= cutoff
         # FileMaker find: ">=" prefix means "greater than or equal"
+        # Try QUOTE_DATE only - most records are quotes
+        # JOB_DATE and DATE SHIPPED are less reliable on this table
         queries = [
             {"QUOTE_DATE": f">={cutoff_str}"},
-            {"JOB_DATE": f">={cutoff_str}"},
-            {"DATE SHIPPED": f">={cutoff_str}"},
         ]
-        print(f"Fetching SCHEDULE records since {cutoff_str} (server-side filter)...")
+        print(f"Fetching SCHEDULE records since {cutoff_str} (server-side filter, 5 min timeout)...")
         seen = set()
         for query in queries:
             offset = 1
@@ -176,7 +176,7 @@ def fetch_schedule(host, db, token, full=False):
                       headers={"Authorization": f"Bearer {token}",
                                "Content-Type": "application/json"})
                 try:
-                    with urllib.request.urlopen(req, timeout=120, context=ctx) as r:
+                    with urllib.request.urlopen(req, timeout=300, context=ctx) as r:
                         data = json.loads(r.read())
                 except urllib.error.HTTPError as e:
                     err = e.read().decode("utf-8", "replace")
