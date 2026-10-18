@@ -131,20 +131,69 @@ def build_cust_map(host, db, token):
     return cust_map
 
 
-def fetch_schedule(host, db, token):
-    rows, offset = [], 1
-    print("Fetching SCHEDULE records...")
-    while True:
-        data = _get_page(host, db, token, "SCHEDULE", offset)
-        records = data.get("response", {}).get("data", [])
-        for rec in records:
-            rows.append(rec.get("fieldData", {}))
-        if len(records) < PAGE:
-            break
-        offset += PAGE
-        if offset % 5000 == 1:
+def fetch_schedule(host, db, token, full=False):
+    """Use FileMaker _find to fetch only recent records server-side."""
+    rows = []
+    cutoff = datetime.now() - timedelta(days=365 * CUTOFF_YEARS)
+    cutoff_str = cutoff.strftime("%m/%d/%Y")
+    ctx = ssl.create_default_context()
+
+    if full:
+        # Full fetch — paginate GET
+        offset = 1
+        print("Fetching ALL SCHEDULE records (this may take a while)...")
+        while True:
+            data = _get_page(host, db, token, "SCHEDULE", offset)
+            records = data.get("response", {}).get("data", [])
+            for rec in records:
+                rows.append(rec.get("fieldData", {}))
+            if len(records) < PAGE:
+                break
+            offset += PAGE
             print(f"  {len(rows)} fetched...")
-    print(f"  {len(rows)} total records")
+    else:
+        # Use _find to filter by date server-side — much faster
+        url = (f"{host}/fmi/data/v1/databases/{urllib.parse.quote(db)}"
+               f"/layouts/SCHEDULE/_find")
+        # Search for records with QUOTE_DATE or JOB_DATE >= cutoff
+        # FileMaker find: ">=" prefix means "greater than or equal"
+        queries = [
+            {"QUOTE_DATE": f">={cutoff_str}"},
+            {"JOB_DATE": f">={cutoff_str}"},
+            {"DATE SHIPPED": f">={cutoff_str}"},
+        ]
+        print(f"Fetching SCHEDULE records since {cutoff_str} (server-side filter)...")
+        seen = set()
+        for query in queries:
+            offset = 1
+            while True:
+                body = json.dumps({
+                    "query": [query],
+                    "limit": PAGE,
+                    "offset": offset,
+                }).encode()
+                req = urllib.request.Request(url, method="POST", data=body,
+                      headers={"Authorization": f"Bearer {token}",
+                               "Content-Type": "application/json"})
+                try:
+                    with urllib.request.urlopen(req, timeout=120, context=ctx) as r:
+                        data = json.loads(r.read())
+                except urllib.error.HTTPError as e:
+                    err = e.read().decode("utf-8", "replace")
+                    if e.code == 401 or '"401"' in err:
+                        break  # no records found for this query
+                    raise SystemExit(f"FM find error: {err[:200]}")
+                records = data.get("response", {}).get("data", [])
+                for rec in records:
+                    fd = rec.get("fieldData", {})
+                    rec_id = s(fd.get("JOB_NUMBER")) + "_" + s(fd.get("_Kf_Customer"))
+                    if rec_id not in seen:
+                        seen.add(rec_id)
+                        rows.append(fd)
+                if len(records) < PAGE:
+                    break
+                offset += PAGE
+        print(f"  {len(rows)} unique records found")
     return rows
 
 
@@ -157,7 +206,7 @@ def run(full=False):
     token = _login(host, db, user, pw)
     try:
         cust_map = build_cust_map(host, db, token)
-        schedule_rows = fetch_schedule(host, db, token)
+        schedule_rows = fetch_schedule(host, db, token, full=full)
     finally:
         _logout(host, db, token)
 
