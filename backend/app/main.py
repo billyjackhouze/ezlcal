@@ -183,6 +183,80 @@ def delete_office(office_id: str, u: dict = Depends(current_user)):
     return {"ok": True}
 
 
+# ---------- account creation ----------
+class AccountIn(BaseModel):
+    name: str
+    types: str = ""
+    address: str = ""
+    city: str = ""
+    state: str = ""
+    zip: str = ""
+    homepage: str = ""
+
+
+@app.post("/api/accounts")
+def create_account(body: AccountIn, u: dict = Depends(current_user)):
+    import uuid as _uuid
+    name = body.name.strip()[:300]
+    if not name:
+        raise HTTPException(400, "Account name is required")
+    types = "".join(c for c in body.types if c in "CUG")[:10]
+    acct_id = str(_uuid.uuid4())
+    with pool.connection() as c, c.transaction():
+        c.execute(
+            """INSERT INTO accounts (id,name,types,address,city,state,zip,homepage,
+               sales_ytd,sales_py,quotes_ytd,updated_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,0,0,0,now())""",
+            (acct_id, name, types, body.address.strip()[:300], body.city.strip()[:120],
+             body.state.strip()[:40], body.zip.strip()[:20], body.homepage.strip()[:300]),
+        )
+    return {"ok": True, "account": [acct_id, name, types, None, None, 0.0, 0.0, 0.0, None,
+                                     body.address.strip(), body.city.strip(),
+                                     body.state.strip(), body.zip.strip(), body.homepage.strip()]}
+
+
+# ---------- contact creation ----------
+class ContactIn(BaseModel):
+    name_first: str
+    name_last: str = ""
+    account_id: str | None = None
+    title: str = ""
+    email: str = ""
+    phone_direct: str = ""
+    phone_mobile: str = ""
+
+
+@app.post("/api/contacts")
+def create_contact(body: ContactIn, u: dict = Depends(current_user)):
+    import time as _time
+    first = body.name_first.strip()[:200]
+    last = body.name_last.strip()[:200]
+    full = (first + " " + last).strip()
+    if not full:
+        raise HTTPException(400, "Contact name is required")
+    contact_id = "W" + str(int(_time.time() * 1000))[-9:]
+    with pool.connection() as c, c.transaction():
+        if body.account_id:
+            if not c.execute("SELECT 1 FROM accounts WHERE id=%s", (body.account_id,)).fetchone():
+                raise HTTPException(400, "Unknown account")
+        c.execute(
+            """INSERT INTO contacts (id,name,account_id,title,email,phone_direct,phone_mobile,
+               work_remote,active,updated_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,false,true,now())""",
+            (contact_id, full, body.account_id or None, body.title.strip()[:200],
+             body.email.strip()[:300], body.phone_direct.strip()[:60], body.phone_mobile.strip()[:60]),
+        )
+        if body.account_id:
+            c.execute(
+                """INSERT INTO contact_accounts (contact_id,account_id,sales_ytd,sales_py,quotes_ytd)
+                   VALUES (%s,%s,0,0,0) ON CONFLICT DO NOTHING""",
+                (contact_id, body.account_id),
+            )
+    return {"ok": True, "contact": [contact_id, full, body.account_id, body.title.strip(),
+                                     body.email.strip(), body.phone_direct.strip(),
+                                     body.phone_mobile.strip(), "", "", "", "", "", False, True]}
+
+
 # ---------- events ----------
 class EventIn(BaseModel):
     id: str
@@ -242,7 +316,6 @@ def put_event(event_id: str, ev: EventIn, u: dict = Depends(current_user)):
         raise HTTPException(400, "Too many invitees (150 max)")
     with pool.connection() as c, c.transaction():
         cur = c.execute("SELECT updated_at FROM events WHERE id=%s FOR UPDATE", (event_id,)).fetchone()
-        # last write wins, by the time the edit was made on the device
         incoming = dt.datetime.fromisoformat(ev.updatedAt.replace("Z", "+00:00")) if ev.updatedAt else None
         if cur and incoming and incoming < cur["updated_at"]:
             return {"ok": True, "stale": True, "event": _event_rows(c, "WHERE id=%s", (event_id,))[0]}
@@ -288,8 +361,8 @@ def _hash(pw: str) -> str:
 class UserCreate(BaseModel):
     username: str
     display_name: str
-    staff_id: str | None = None        # link to an existing staff member
-    new_staff_dept: str | None = None  # or create a new staff member (shows on calendars)
+    staff_id: str | None = None
+    new_staff_dept: str | None = None
     is_admin: bool = False
 
 
@@ -335,7 +408,7 @@ def admin_create(body: UserCreate, u: dict = Depends(admin_user)):
             if c.execute("SELECT 1 FROM app_users WHERE staff_id=%s", (staff_id,)).fetchone():
                 raise HTTPException(400, "That staff member already has a login")
         elif body.new_staff_dept is not None:
-            staff_id = "W" + secrets.token_hex(3).upper()   # web-created staff; FileMaker sync maps these later
+            staff_id = "W" + secrets.token_hex(3).upper()
             c.execute("INSERT INTO staff (id,name,dept,active) VALUES (%s,%s,%s,true)",
                       (staff_id, name, body.new_staff_dept.strip()[:60]))
         c.execute(

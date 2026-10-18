@@ -489,9 +489,9 @@ function renderEntity(main,k){
   const ph={a:'Search '+ACC.length.toLocaleString('en-US')+' accounts',c:'Search contacts or company',s:'Search staff'}[k];
   const sel=S.sel[k];
   main.className='split'+(sel>=0?' has':'');
-  main.innerHTML=`<section class="listpane" aria-label="List"><div class="listhead"><input class="search" id="q" type="search" placeholder="${ph}" value="${esc(S.q[k])}" aria-label="${ph}"></div><div class="list">${rows||'<div class="empty">No matches</div>'}</div></section>
+  main.innerHTML=`<section class="listpane" aria-label="List"><div class="listhead"><input class="search" id="q" type="search" placeholder="${ph}" value="${esc(S.q[k])}" aria-label="${ph}">${k==='a'?'<button class="btn" id="qadd" style="flex:0 0 auto">+ Company</button>':k==='c'?'<button class="btn" id="qadd" style="flex:0 0 auto">+ Contact</button>':''}</div><div class="list">${rows||'<div class="empty">No matches</div>'}</div></section>
     ${sel>=0?detailHtml(k,sel):'<section class="detail"><div class="empty">Pick a record on the left.</div></section>'}`;
-  const qi=$('#q');qi.oninput=e=>{S.q[k]=e.target.value;const pos=e.target.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(pos,pos);};
+  const qi=$('#q');const qadd=$('#qadd');if(qadd)qadd.onclick=()=>{if(k==='a')openNewAccount();else openNewContact(-1);};qi.oninput=e=>{S.q[k]=e.target.value;const pos=e.target.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(pos,pos);};
 }
 function detailHtml(k,i){
   const back=`<button class="btn backbtn" data-back>‹ Back</button>`;
@@ -522,7 +522,7 @@ function detailHtml(k,i){
       ${a[2]>=0?`<dt>parent</dt><dd><button class="linkbtn" data-goto="a:${a[2]}" style="color:var(--accent)">${esc(ACC[a[2]][0])}</button></dd>`:''}</dl></div>
       <div class="acctOffices"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><b style="flex:1">Offices</b><button class="btn" data-office="new:${i}">+ Add office</button></div>
         ${offs.length?offs.map(officeCard).join(''):'<div class="muted" style="font-size:12.5px;padding:8px 0">No offices yet. Add the HQ, accounting or sales office addresses here.</div>'}</div></div>
-      ${people.length?`<div class="box"><div class="boxhead"><b>Contacts</b><span class="muted">${people.length}</span><span class="spacer"></span></div><div style="overflow-x:auto"><table class="ctab"><thead><tr><th>Name</th><th>Mobile</th><th>Direct</th><th>Email</th><th class="num">Sales YTD</th><th class="num">Prior yr</th><th class="num">Quotes YTD</th></tr></thead><tbody>
+      ${people.length?`<div class="box"><div class="boxhead"><b>Contacts</b><span class="muted">${people.length}</span><span class="spacer"></span><button class="btn" style="height:26px;padding:0 9px;font-size:12px" onclick="openNewContact(${i})">+ Add contact</button></div><div style="overflow-x:auto"><table class="ctab"><thead><tr><th>Name</th><th>Mobile</th><th>Direct</th><th>Email</th><th class="num">Sales YTD</th><th class="num">Prior yr</th><th class="num">Quotes YTD</th></tr></thead><tbody>
         ${people.map(c=>{const C=CON[c],L=linkBy[i+':'+c];return `<tr class="${C[12]?'':'inactive'}"><td><button class="linkbtn" data-goto="c:${c}"><b>${esc(C[0])}</b></button>${C[2]?`<div class="muted" style="font-size:12px">${esc(C[2])}</div>`:''}</td><td>${tel(C[5])}</td><td>${tel(C[4])}</td><td>${C[3]?`<a href="mailto:${esc(C[3])}">${esc(C[3])}</a>`:''}</td><td class="num">${L&&L[2]?money(L[2]):''}</td><td class="num">${L&&L[3]?money(L[3]):''}</td><td class="num">${L&&L[4]?money(L[4]):''}</td></tr>`;}).join('')}</tbody></table></div></div>`:''}
       ${fam.length>1?`<div class="box"><div class="boxhead"><b>Company family</b><span class="muted">parent, children and grandchildren</span><span class="spacer"></span><span class="muted" style="font-size:12px;width:86px;text-align:right">Sales YTD</span><span class="muted" style="font-size:12px;width:92px;text-align:right">Last order</span></div>
         <div style="max-height:320px;overflow:auto">${fam.map(([n,d])=>`<div class="frow" style="${n===i?'background:var(--btnOn)':''}"><span style="width:${d*16}px;flex:0 0 ${d*16}px"></span><span class="muted" style="width:14px">${d?'└':'◆'}</span><button class="linkbtn" data-goto="a:${n}" style="flex:1;min-width:0;${d?'':'font-weight:600'}">${esc(ACC[n][0])}</button><span class="num" style="width:86px">${money(ACC[n][4])}</span><span class="num muted" style="width:92px">${ACC[n][7]?fmtDate(ACC[n][7]):'—'}</span></div>`).join('')}</div></div>`:''}
@@ -590,6 +590,62 @@ function openOffice(ref){
   m.querySelector('form').onsubmit=e=>{e.preventDefault();save(false);};
   const del=$('#of_del');if(del)del.onclick=()=>{if(!del.dataset.armed){del.dataset.armed='1';del.textContent='Tap again to delete';del.style.color='var(--red)';return;}save(true);};
   $('#of_addr').focus();
+}
+
+
+/* ---------- new account ---------- */
+function openNewAccount(onCreated){
+  let m=document.getElementById('modal');if(!m){m=document.createElement('div');m.id='modal';document.body.appendChild(m);}
+  m.innerHTML='<div class="scrim" data-scrim><form class="sheet" style="max-width:520px"><header><h2>Add company<\/h2><button type="button" class="btn icon" id="na_x">&#x2715;<\/button><\/header><div class="form"><label class="l" for="na_name">Company name<\/label><input type="text" id="na_name" required placeholder="Full legal or trade name"><label class="l">Type<\/label><div style="display:flex;gap:12px;flex-wrap:wrap"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="na_C">Customer<\/label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="na_U">End user<\/label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="na_G">Engineering<\/label><\/div><label class="l" for="na_addr">Address<\/label><input type="text" id="na_addr" placeholder="Street (optional)"><label class="l">City \/ ST \/ Zip<\/label><div style="display:flex;gap:8px"><input type="text" id="na_city" placeholder="City" style="flex:1;min-width:0"><input type="text" id="na_st" placeholder="ST" style="width:60px"><input type="text" id="na_zip" placeholder="Zip" style="width:90px" inputmode="numeric"><\/div><\/div><div class="foot"><button type="button" class="btn" id="na_cancel">Cancel<\/button><button class="btn primary" type="submit">Add company<\/button><\/div><\/form><\/div>';
+  const close=()=>m.remove();
+  document.getElementById('na_x').onclick=close;document.getElementById('na_cancel').onclick=close;
+  m.querySelector('[data-scrim]').onclick=ev=>{if(ev.target===ev.currentTarget)close();};
+  setTimeout(()=>{const n=document.getElementById('na_name');if(n)n.focus();},30);
+  m.querySelector('form').onsubmit=async e=>{e.preventDefault();
+    const types=['C','U','G'].filter(c=>document.getElementById('na_'+c).checked).join('');
+    const body={name:document.getElementById('na_name').value.trim(),types,address:document.getElementById('na_addr').value.trim(),city:document.getElementById('na_city').value.trim(),state:document.getElementById('na_st').value.trim(),zip:document.getElementById('na_zip').value.trim()};
+    if(!body.name){document.getElementById('na_name').focus();return;}
+    try{const r=await EZ.api('/accounts',{method:'POST',body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));
+      if(!r.ok){toast(typeof j.detail==='string'?j.detail:'Could not add the company');return;}
+      const a=j.account;const newIdx=ACC.length;K.a.push(a[0]);IX.a.set(a[0],newIdx);
+      ACC.push([a[1],a[2]||'',a[3]!=null&&IX.a.has(a[3])?IX.a.get(a[3]):-1,a[4]!=null&&IX.a.has(a[4])?IX.a.get(a[4]):-1,a[5]||0,a[6]||0,a[7]||0,a[8]||'',a[9]||'',a[10]||'',a[11]||'',a[12]||'',a[13]||'']);
+      conByAcct[newIdx]=[];close();toast('Company added');
+      if(onCreated)onCreated(newIdx,a[0]);else{S.view='a';S.sel.a=newIdx;render();}
+    }catch(e){if(!(e&&e.code===401))toast('No connection. Could not add the company.');}};
+}
+/* ---------- new contact ---------- */
+function openNewContact(preAcctIdx,onCreated){
+  let m=document.getElementById('modal');if(!m){m=document.createElement('div');m.id='modal';document.body.appendChild(m);}
+  const preAcct=(preAcctIdx>=0&&ACC[preAcctIdx])?preAcctIdx:-1;let selAcctIdx=preAcct;
+  const preChip=preAcct>=0?'<span class="chip a">'+esc(ACC[preAcct][0])+'<button type="button" class="x" id="nc_arm">x<\/button><\/span>':'';
+  m.innerHTML='<div class="scrim" data-scrim><form class="sheet" style="max-width:520px"><header><h2>Add contact'+(preAcct>=0?' \u00b7 '+esc(ACC[preAcct][0]):'')+'<\/h2><button type="button" class="btn icon" id="nc_x">&#x2715;<\/button><\/header><div class="form"><label class="l" for="nc_first">First name<\/label><input type="text" id="nc_first" required placeholder="First"><label class="l" for="nc_last">Last name<\/label><input type="text" id="nc_last" placeholder="Last"><label class="l" for="nc_title">Title<\/label><input type="text" id="nc_title" placeholder="e.g. Project Engineer"><label class="l" for="nc_mobile">Mobile<\/label><input type="text" id="nc_mobile" inputmode="tel" placeholder="Cell phone"><label class="l" for="nc_direct">Direct<\/label><input type="text" id="nc_direct" inputmode="tel" placeholder="Direct line"><label class="l" for="nc_email">Email<\/label><input type="text" id="nc_email" inputmode="email" placeholder="work@company.com"><label class="l" for="nc_aq">Account<\/label><div><input type="text" id="nc_aq" autocomplete="off" placeholder="Type to search accounts" style="width:100%"><div id="nc_asel" style="margin-top:6px">'+preChip+'<\/div><div id="nc_ares"><\/div><\/div><\/div><div class="foot"><button type="button" class="btn" id="nc_cancel">Cancel<\/button><button class="btn primary" type="submit">Add contact<\/button><\/div><\/form><\/div>';
+  const close=()=>m.remove();
+  document.getElementById('nc_x').onclick=close;document.getElementById('nc_cancel').onclick=close;
+  m.querySelector('[data-scrim]').onclick=ev=>{if(ev.target===ev.currentTarget)close();};
+  setTimeout(()=>{const n=document.getElementById('nc_first');if(n)n.focus();},30);
+  const setSelAcct=(idx)=>{selAcctIdx=idx;const sel=document.getElementById('nc_asel');
+    sel.innerHTML=idx>=0?'<span class="chip a">'+esc(ACC[idx][0])+'<button type="button" class="x" id="nc_arm2">x<\/button><\/span>':'';
+    if(idx>=0){const rm=document.getElementById('nc_arm2');if(rm)rm.onclick=()=>setSelAcct(-1);}};
+  const arm=document.getElementById('nc_arm');if(arm)arm.onclick=()=>setSelAcct(-1);
+  const aq=document.getElementById('nc_aq'),ares=document.getElementById('nc_ares');
+  aq.oninput=()=>{const q=aq.value.trim().toLowerCase();ares.innerHTML='';if(q.length<2)return;
+    const hits=ACC.map((a,i)=>i).filter(i=>ACC[i][0].toLowerCase().includes(q)).slice(0,8);
+    if(!hits.length){ares.innerHTML='<div class="res"><div style="padding:8px 12px" class="muted">No match \u2014 <button type="button" class="linkbtn" style="color:var(--accent)" id="nc_addco">add as new company<\/button><\/div><\/div>';
+      document.getElementById('nc_addco').onclick=()=>{aq.value='';ares.innerHTML='';openNewAccount((newIdx)=>setSelAcct(newIdx));};return;}
+    ares.innerHTML='<div class="res">'+hits.map(i=>'<button type="button" data-pi="'+i+'"><span>'+esc(ACC[i][0])+'<\/span><span class="muted" style="font-size:12px">'+esc(ACC[i][1].split('').filter(Boolean).map(c=>TYPE[c]).join(', '))+'<\/span><\/button>').join('')+'<\/div>';
+    ares.querySelectorAll('[data-pi]').forEach(b=>b.onclick=()=>{aq.value='';ares.innerHTML='';setSelAcct(+b.dataset.pi);});};
+  m.querySelector('form').onsubmit=async e=>{e.preventDefault();
+    const body={name_first:document.getElementById('nc_first').value.trim(),name_last:document.getElementById('nc_last').value.trim(),title:document.getElementById('nc_title').value.trim(),email:document.getElementById('nc_email').value.trim(),phone_mobile:document.getElementById('nc_mobile').value.trim(),phone_direct:document.getElementById('nc_direct').value.trim(),account_id:selAcctIdx>=0?K.a[selAcctIdx]:null};
+    if(!body.name_first){document.getElementById('nc_first').focus();return;}
+    try{const r=await EZ.api('/contacts',{method:'POST',body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));
+      if(!r.ok){toast(typeof j.detail==='string'?j.detail:'Could not add the contact');return;}
+      const ct=j.contact;const newIdx=CON.length;K.c.push(ct[0]);IX.c.set(String(ct[0]),newIdx);
+      CON.push([ct[1],ct[2]!=null&&IX.a.has(ct[2])?IX.a.get(ct[2]):-1,ct[3]||'',ct[4]||'',ct[5]||'',ct[6]||'','','','','','',false,true]);
+      conAccts[newIdx]=new Set(selAcctIdx>=0?[selAcctIdx]:[]);
+      if(selAcctIdx>=0)(conByAcct[selAcctIdx]=conByAcct[selAcctIdx]||[]).push(newIdx);
+      close();toast('Contact added');
+      if(onCreated)onCreated(newIdx,ct[0]);else{S.view='c';S.sel.c=newIdx;render();}
+    }catch(e){if(!(e&&e.code===401))toast('No connection. Could not add the contact.');}};
 }
 
 /* ---------- admin ---------- */
@@ -746,7 +802,7 @@ function renderModal(){
       const has=(t,i)=>e.att.some(x=>x[0]===t&&x[1]===i);
       const hits=(t,arr,lab,sub,max)=>{const out=[];for(let i=0;i<arr.length&&out.length<max;i++){if(has(t,i))continue;const n=arr[i][0];if(n&&n.toLowerCase().includes(q))out.push([t,i,sub(i)]);}return out.length?{lab,out}:null;};
       const groups=[hits('s',STF,'Staff',i=>STF[i][1],5),hits('a',ACC,'Accounts',i=>ACC[i][2]>=0?'Parent: '+ACC[ACC[i][2]][0]:(ACC[i][4]?'YTD '+money(ACC[i][4]):'Account'),6),hits('c',CON,'Contacts',i=>CON[i][1]>=0?ACC[CON[i][1]][0]:'',6)].filter(Boolean);
-      if(!groups.length){box.innerHTML=`<div class="res"><div style="padding:10px 12px" class="muted">No staff, account or contact matches "${esc(M.q)}".</div></div>`;return;}
+      if(!groups.length){const qv=M.q.trim();box.innerHTML='<div class="res"><div style="padding:8px 12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center" class="muted">No match for "'+esc(qv)+'"<button type="button" class="btn" style="height:26px;padding:0 9px;font-size:12px" id="inv_addco">+ Add company</button><button type="button" class="btn" style="height:26px;padding:0 9px;font-size:12px" id="inv_addct">+ Add contact</button></div></div>';const iac=document.getElementById('inv_addco');if(iac)iac.onclick=()=>{sync();openNewAccount((newIdx)=>{e.att.push(['a',newIdx]);M.q='';renderModal();const fi=document.getElementById('f_inv');if(fi)fi.focus();});};const iact=document.getElementById('inv_addct');if(iact)iact.onclick=()=>{sync();openNewContact(-1,(newIdx)=>{e.att.push(['c',newIdx]);M.q='';renderModal();const fi=document.getElementById('f_inv');if(fi)fi.focus();});};return;}
       let k=0;box.innerHTML=`<div class="res" role="listbox">${groups.map(gp=>`<div class="g">${gp.lab}</div>${gp.out.map(([t,i,s])=>`<button type="button" role="option" class="${k++===M.hl?'hl':''}" data-add="${t}:${i}"><span>${esc(name(t,i))}</span><span class="muted" style="font-size:12px">${esc(s)}</span></button>`).join('')}`).join('')}</div>`;
       box.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{sync();const [t,i]=b.dataset.add.split(':');e.att.push([t,+i]);M.q='';renderModal();$('#f_inv').focus();});
     }
