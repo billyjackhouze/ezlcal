@@ -10,6 +10,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="EZLine">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2">
 <link rel="icon" href="/icons/icon-192.png">
 <style>
@@ -162,6 +164,19 @@ dl.kv dt{text-align:right;color:var(--sub)} dl.kv dd{margin:0}
 .gate input{width:100%;box-sizing:border-box;height:40px;border-radius:9px;border:1px solid var(--line);background:var(--field);padding:0 12px;font-size:16px}
 .gate .btn{width:100%;height:42px;margin-top:18px;font-size:15px}
 .gate .err{color:var(--red);margin-top:10px;min-height:18px}
+.mapview{flex:1;display:flex;flex-direction:column;min-height:0;position:relative}
+.mapbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--chrome);z-index:5}
+.mapbar h2{margin:0;font-size:15px;font-weight:500;flex:1}
+#leaflet-map{flex:1;min-height:0;z-index:1}
+.map-popup{font:13px/1.4 -apple-system,sans-serif;min-width:180px}
+.map-popup b{font-size:14px;display:block;margin-bottom:4px}
+.map-popup .muted{color:#888;font-size:12px}
+.map-popup a{color:#2f6fde;text-decoration:none}
+.legend{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom,0px));right:14px;z-index:10;background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:12px;box-shadow:0 4px 16px var(--shadow);min-width:180px}
+.legend b{display:block;margin-bottom:6px;font-size:13px}
+.legend .li{display:flex;align-items:center;gap:8px;margin:4px 0}
+.legend .sw{width:14px;height:14px;border-radius:3px;flex:0 0 14px}
+.legend .bar{width:4px;height:14px;border-radius:2px;flex:0 0 4px}
 .hint{margin-top:16px;padding:10px 12px;border-radius:10px;background:var(--btnOn);font-size:12.5px}
 </style>
 </head>
@@ -359,7 +374,7 @@ function renderStatus(){
 }
 function render(){
   const app=$('#app');
-  const tabs=[['team','Team'],['cal','Calendar'],['a','Accounts'],['c','Contacts'],['s','Staff']].concat(EZ.user.is_admin?[['admin','Admin']]:[]);
+  const tabs=[['team','Team'],['cal','Calendar'],['map','Map'],['a','Accounts'],['c','Contacts'],['s','Staff']].concat(EZ.user.is_admin?[['admin','Admin']]:[]);
   app.innerHTML=`<header class="top">
     <span class="brand"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" aria-hidden="true"><path d="M3 12h18M7 7l-4 5 4 5M17 7l4 5-4 5"/></svg>EZLine CRM</span>
     <nav class="tabs" aria-label="Sections">${tabs.map(([k,l])=>`<button class="tab" data-tab="${k}" ${S.view===k?'aria-current="page"':''}>${l}</button>`).join('')}</nav>
@@ -373,6 +388,7 @@ function render(){
   if(S.view==='team') renderTeam(main);
   else if(S.view==='cal') renderCal(main);
   else if(S.view==='admin') renderAdmin(main);
+  else if(S.view==='map') renderMap(main);
   else renderEntity(main,S.view);
   renderStatus();
   if(S.modal) renderModal();
@@ -646,6 +662,98 @@ function openNewContact(preAcctIdx,onCreated){
       close();toast('Contact added');
       if(onCreated)onCreated(newIdx,ct[0]);else{S.view='c';S.sel.c=newIdx;render();}
     }catch(e){if(!(e&&e.code===401))toast('No connection. Could not add the contact.');}};
+}
+
+
+/* ---------- map ---------- */
+let _mapInst=null, _mapData=null, _mapMode='nearby', _mapFamily=-1;
+const CAT_COLOR={'C':'#2f8f3a','U':'#2f6fde','G':'#d4721c','CU':'#1c7c74','CG':'#7d4fc4','UG':'#b5487a','CUG':'#5f6b7a','':'#5f6b7a'};
+function acctColor(types){return CAT_COLOR[types]||'#5f6b7a';}
+function renderMap(main){
+  main.innerHTML=`<div class="mapview"><div class="mapbar">
+    <div class="seg">${[['nearby','Nearby'],['family','Family'],['all','All']].map(([k,l])=>`<button data-mapmode="${k}" aria-pressed="${_mapMode===k}">${l}</button>`).join('')}</div>
+    <h2 id="maptitle">Loading map…</h2>
+    <button class="btn" id="map_legend_btn">Legend</button>
+  </div><div id="leaflet-map"></div></div>`;
+  main.querySelectorAll('[data-mapmode]').forEach(b=>b.onclick=()=>{_mapMode=b.dataset.mapmode;renderMap(main);});
+  document.getElementById('map_legend_btn').onclick=toggleLegend;
+  if(_mapInst){_mapInst.remove();_mapInst=null;}
+  const map=L.map('leaflet-map',{zoomControl:true}).setView([29.8,-95.4],8);
+  _mapInst=map;
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19}).addTo(map);
+  if(_mapData){drawPins(map);} else {
+    EZ.api('/map').then(r=>r.json()).then(j=>{_mapData=j.offices;drawPins(map);}).catch(()=>toast('Could not load map data'));
+  }
+}
+function drawPins(map){
+  map.eachLayer(l=>{if(l instanceof L.Marker)map.removeLayer(l);});
+  let offices=_mapData||[];
+  const title=document.getElementById('maptitle');
+  if(_mapMode==='nearby'){
+    if(!navigator.geolocation){if(title)title.textContent='Geolocation not available';return;}
+    if(title)title.textContent='Finding your location…';
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const {latitude:lat,longitude:lng}=pos.coords;
+      L.circle([lat,lng],{radius:1000,color:'#2f6fde',fillOpacity:0.15,weight:2}).addTo(map);
+      L.marker([lat,lng],{icon:L.divIcon({html:'<div style="width:14px;height:14px;border-radius:7px;background:#2f6fde;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',iconSize:[14,14],iconAnchor:[7,7]})}).addTo(map).bindPopup('<b>You are here</b>');
+      offices=offices.slice().sort((a,b)=>dist(lat,lng,a.lat,a.lng)-dist(lat,lng,b.lat,b.lng));
+      if(title)title.textContent='Accounts near you ('+offices.length+')';
+      offices.forEach(o=>addPin(map,o));
+      if(offices.length)map.fitBounds(offices.slice(0,30).map(o=>[o.lat,o.lng]).concat([[lat,lng]]),{padding:[30,30]});
+    },()=>{if(title)title.textContent='Location access denied — showing all';offices.forEach(o=>addPin(map,o));fitMap(map,offices);},{timeout:8000});
+    return;
+  }
+  if(_mapMode==='family'&&_mapFamily>=0){
+    const famIds=new Set(family(_mapFamily).map(([n])=>IX.a.has?n:n).map(n=>K.a[n]||''));
+    offices=offices.filter(o=>famIds.has(o.account_id));
+    if(title)title.textContent=(ACC[_mapFamily]?ACC[_mapFamily][0]+' family':'Family')+' ('+offices.length+' offices)';
+  } else {
+    if(title)title.textContent='All offices ('+offices.length+')';
+  }
+  offices.forEach(o=>addPin(map,o));
+  fitMap(map,offices);
+}
+function dist(lat1,lng1,lat2,lng2){const R=3959;const dL=(lat2-lat1)*Math.PI/180,dl=(lng2-lng1)*Math.PI/180;const a=Math.sin(dL/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dl/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+function fitMap(map,offices){if(offices.length)map.fitBounds(offices.map(o=>[o.lat,o.lng]),{padding:[30,30],maxZoom:12});}
+function addPin(map,o){
+  const color=acctColor(o.types);
+  const icon=L.divIcon({html:`<div style="width:12px;height:12px;border-radius:6px;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)"></div>`,iconSize:[12,12],iconAnchor:[6,6]});
+  const addr=[o.address,[o.city,o.state].filter(Boolean).join(', '),o.zip].filter(Boolean).join('<br>');
+  const tel=o.phone?`<br><a href="tel:${o.phone.replace(/[^0-9+]/g,'')}">${o.phone}</a>`:'';
+  const nav=addr?`<br><button onclick="launchNav(${o.lat},${o.lng},'${(o.address+', '+o.city).replace(/'/g,"\\'")}','${encodeURIComponent([o.address,o.city,o.state,o.zip].filter(Boolean).join(', '))}')" style="margin-top:6px;padding:4px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;font-size:12px">&#9660; Directions</button>`:'';
+  const aIdx=IX.a.get(o.account_id);
+  const acctLink=aIdx!=null?`<button onclick="window.__go('a','a',${aIdx})" style="border:0;background:transparent;padding:0;color:#2f6fde;cursor:pointer;font-size:12px">View account</button>`:'';
+  L.marker([o.lat,o.lng],{icon}).addTo(map).bindPopup(`<div class="map-popup"><b>${esc(o.account_name)}</b><span class="muted">${esc(o.office_type)}</span><br>${addr}${tel}${nav}<br>${acctLink}</div>`);
+}
+function launchNav(lat,lng,label,enc){
+  const opts=[['Apple Maps',`maps://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`],['Google Maps',`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`],['Waze',`https://waze.com/ul?ll=${lat},${lng}&navigate=yes`]];
+  let m=document.getElementById('modal');if(!m){m=document.createElement('div');m.id='modal';document.body.appendChild(m);}
+  m.innerHTML=`<div class="scrim" data-scrim><div class="sheet" style="max-width:340px"><header><h2>Open directions in…</h2><button class="btn icon" onclick="document.getElementById('modal').remove()">&#x2715;</button></header><div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px">${opts.map(([n,u])=>`<a href="${u}" target="_blank" rel="noopener" class="btn" style="text-align:center;padding:10px;font-size:14px;text-decoration:none" onclick="document.getElementById('modal').remove()">${n}</a>`).join('')}</div></div></div>`;
+  m.querySelector('[data-scrim]').onclick=ev=>{if(ev.target===ev.currentTarget)m.remove();};
+}
+let _legendVisible=false;
+function toggleLegend(){
+  const existing=document.querySelector('.legend');
+  if(existing){existing.remove();_legendVisible=false;return;}
+  _legendVisible=true;
+  const el=document.createElement('div');el.className='legend';
+  el.innerHTML=`<b>Map pins</b>
+    <div class="li"><span class="sw" style="background:#2f8f3a"></span>Customer</div>
+    <div class="li"><span class="sw" style="background:#2f6fde"></span>End user</div>
+    <div class="li"><span class="sw" style="background:#d4721c"></span>Engineering</div>
+    <div class="li"><span class="sw" style="background:#1c7c74"></span>Customer + End user</div>
+    <div class="li"><span class="sw" style="background:#7d4fc4"></span>Customer + Engineering</div>
+    <b style="margin-top:10px;display:block">Appointment colors</b>
+    <div class="li"><span class="bar" style="background:#2f8f3a"></span>Customer visit / meal</div>
+    <div class="li"><span class="bar" style="background:#2f6fde"></span>Meeting</div>
+    <div class="li"><span class="bar" style="background:#d4721c"></span>Outing</div>
+    <div class="li"><span class="bar" style="background:#1c7c74"></span>Lunch & learn / site visit</div>
+    <div class="li"><span class="bar" style="background:#7d4fc4"></span>Follow-up</div>
+    <div class="li"><span class="bar" style="background:#6b6b72"></span>Travel</div>
+    <b style="margin-top:10px;display:block">Account list</b>
+    <div class="li"><span style="width:4px;height:14px;background:#2f8f3a;border-radius:2px;flex:0 0 4px"></span>Has appointments</div>
+    <div class="li"><span style="width:4px;height:14px;background:var(--line);border-radius:2px;flex:0 0 4px"></span>No appointments yet</div>`;
+  document.querySelector('main').appendChild(el);
 }
 
 /* ---------- admin ---------- */

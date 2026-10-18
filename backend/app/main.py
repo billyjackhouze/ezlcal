@@ -339,6 +339,39 @@ def put_event(event_id: str, ev: EventIn, u: dict = Depends(current_user)):
     return {"ok": True, "event": row}
 
 
+
+
+# ---------- map ----------
+@app.get("/api/map")
+def get_map(u: dict = Depends(current_user)):
+    with pool.connection() as c:
+        offices = c.execute("""
+            SELECT o.id, o.account_id, o.office_type,
+                   o.address, o.city, o.state, o.zip,
+                   o.phone, o.lat, o.lng,
+                   a.name AS account_name, a.types, a.sales_ytd,
+                   a.parent_id, a.root_id
+            FROM account_offices o
+            JOIN accounts a ON a.id = o.account_id
+            WHERE NOT o.deleted
+              AND o.lat IS NOT NULL
+            ORDER BY a.name, o.office_type
+        """).fetchall()
+    return {"offices": [
+        {"id": o["id"], "account_id": o["account_id"],
+         "office_type": o["office_type"] or "Office",
+         "address": o["address"], "city": o["city"],
+         "state": o["state"], "zip": o["zip"],
+         "phone": o["phone"],
+         "lat": float(o["lat"]), "lng": float(o["lng"]),
+         "account_name": o["account_name"],
+         "types": o["types"] or "",
+         "sales_ytd": float(o["sales_ytd"] or 0),
+         "parent_id": o["parent_id"],
+         "root_id": o["root_id"]}
+        for o in offices
+    ]}
+
 # ---------- admin ----------
 USERNAME_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{2,39}$")
 
