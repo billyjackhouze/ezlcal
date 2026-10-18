@@ -1,764 +1,475 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>EZLine CRM</title>
-<link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#2f6fde">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="EZLine">
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2">
-<link rel="icon" href="/icons/icon-192.png">
-<style>
-:root{
-  --bg:#ffffff;--chrome:#f6f6f8;--side:#f2f2f4;--text:#1d1d1f;--sub:#62626a;--line:#e2e2e6;--btn:#ffffff;--btnOn:#e6e6eb;
-  --accent:#2f6fde;--year:#2c6bd6;--sel:#2f6fde;--selFg:#fff;--green:#2f8f3a;--red:#d93025;--warnBg:#fbeeda;--warnFg:#6b4209;
-  --sheet:#ffffff;--shadow:rgba(20,20,30,.18);--field:#ffffff;--grid:#ececf0;--today:#fff4f3;
-  --cStaff:#e3edfc;--cStaffFg:#1f4f9e;--cAcct:#e2f2e4;--cAcctFg:#21652b;--cCont:#fbeeda;--cContFg:#85520f;
-  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#1e1e20;--chrome:#252528;--side:#2a2a2d;--text:#f2f2f4;--sub:#a5a5ac;--line:#3a3a3f;--btn:#2f2f33;--btnOn:#3d3d43;
-  --accent:#5b9bff;--year:#6ea8ff;--sel:#2f6fde;--green:#4cbb5a;--red:#ff5a4f;--warnBg:#4a3a1e;--warnFg:#ffe2b0;
-  --sheet:#232326;--shadow:rgba(0,0,0,.6);--field:#1a1a1d;--grid:#2c2c30;--today:#2a2224;
-  --cStaff:#26405f;--cStaffFg:#9cc4ff;--cAcct:#23452b;--cAcctFg:#8fdc9a;--cCont:#4a3a1e;--cContFg:#f2c27a;}}
-:root[data-theme="dark"]{
-  --bg:#1e1e20;--chrome:#252528;--side:#2a2a2d;--text:#f2f2f4;--sub:#a5a5ac;--line:#3a3a3f;--btn:#2f2f33;--btnOn:#3d3d43;
-  --accent:#5b9bff;--year:#6ea8ff;--sel:#2f6fde;--green:#4cbb5a;--red:#ff5a4f;--warnBg:#4a3a1e;--warnFg:#ffe2b0;
-  --sheet:#232326;--shadow:rgba(0,0,0,.6);--field:#1a1a1d;--grid:#2c2c30;--today:#2a2224;
-  --cStaff:#26405f;--cStaffFg:#9cc4ff;--cAcct:#23452b;--cAcctFg:#8fdc9a;--cCont:#4a3a1e;--cContFg:#f2c27a;}
-html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.4 -apple-system,"SF Pro Text","Helvetica Neue",sans-serif}
-button,input,select,textarea{font:inherit;color:inherit}
-button{cursor:pointer}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.app{height:100%;display:flex;flex-direction:column}
-header.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;background:var(--chrome);border-bottom:1px solid var(--line)}
-.brand{font-weight:700;font-size:15px;margin-right:10px;display:flex;align-items:center;gap:6px}
-.tabs{display:flex;gap:2px;flex-wrap:wrap}
-.tab{height:30px;padding:0 12px;border-radius:8px;border:1px solid transparent;background:transparent}
-.tab[aria-current="page"]{background:var(--btnOn);border-color:var(--line);font-weight:600}
-.spacer{flex:1 1 auto}
-.btn{height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--btn)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
-.btn.icon{width:34px;padding:0;display:inline-flex;align-items:center;justify-content:center}
-.pill{height:26px;display:inline-flex;align-items:center;gap:6px;padding:0 10px;border-radius:13px;border:1px solid var(--line);font-size:12px;background:var(--btn)}
-.pill .dot{width:8px;height:8px;border-radius:4px;background:var(--green)}
-.pill.off{background:var(--warnBg);color:var(--warnFg)} .pill.off .dot{background:#d9822b}
-main{flex:1 1 auto;min-height:0;display:flex}
-.pane{overflow:auto;min-height:0}
-.listpane{flex:0 0 300px;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
-.listhead{padding:8px 10px;border-bottom:1px solid var(--line);display:flex;gap:6px;align-items:center}
-.search{flex:1;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--field);padding:0 10px}
-.list{flex:1;overflow:auto;padding:4px 6px}
-.row{display:block;width:100%;text-align:left;border:0;background:transparent;padding:7px 10px;border-radius:8px;border-left:3px solid transparent;margin:1px 0}
-.row:hover{background:var(--btnOn)}
-.row.on{background:var(--sel);color:var(--selFg)}
-.row .s{font-size:12px;opacity:.75}
-.detail{flex:1 1 420px;padding:20px 26px;min-width:0}
-.activity{flex:0 1 430px;border-left:1px solid var(--line);padding:12px 18px;min-width:0}
-h1{font-size:22px;font-weight:600;margin:0}
-h2.year{font-size:18px;font-weight:500;color:var(--year);margin:14px 0 4px}
-.muted{color:var(--sub)}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:12px;background:var(--btnOn);font-size:12px;border:0}
-.chip.a{background:var(--cAcct);color:var(--cAcctFg)} .chip.c{background:var(--cCont);color:var(--cContFg)} .chip.s{background:var(--cStaff);color:var(--cStaffFg)}
-.chip b{font-weight:600;font-size:11px}
-.chip .x{border:0;background:transparent;width:20px;height:20px;border-radius:10px;color:inherit;opacity:.7}
-dl.kv{display:grid;grid-template-columns:110px minmax(0,1fr);gap:7px 14px;margin:18px 0 0}
-dl.kv dt{text-align:right;color:var(--sub)} dl.kv dd{margin:0}
-.box{margin-top:22px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.boxhead{padding:9px 14px;background:var(--side);border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.frow{display:flex;gap:10px;align-items:center;padding:7px 14px;border-bottom:1px solid var(--line)}
-.frow:last-child{border-bottom:0}
-.linkbtn{border:0;background:transparent;padding:0;text-align:left;color:inherit}
-.linkbtn:hover{text-decoration:underline}
-.num{font-variant-numeric:tabular-nums;text-align:right}
-.ev{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
-.ev .bar{width:4px;border-radius:2px;flex:0 0 4px}
-.ev .t{font-weight:500}
-.ev .meta{font-size:12px;color:var(--sub)}
-.ev p{margin:5px 0 0;font-size:12.5px}
-.now{display:flex;align-items:center;gap:8px;margin:6px 0}
-.now i{width:9px;height:9px;border-radius:5px;background:var(--red)} .now span{flex:1;height:1px;background:var(--sub);opacity:.4} .now em{color:var(--red);font-style:normal;font-size:12px}
-/* team */
-.team{padding:20px 22px;display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start;overflow:auto;flex:1}
-.col{flex:1 1 280px;max-width:340px;min-width:250px}
-.who{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.av{width:36px;height:36px;border-radius:18px;background:#9a9aa2;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600}
-.dayh{display:flex;justify-content:space-between;align-items:baseline;margin-top:14px;padding-bottom:5px;border-bottom:1px solid var(--line)}
-.dayh span:first-child{color:var(--year);font-size:16px}
-.ti{display:flex;width:100%;gap:10px;align-items:flex-start;padding:8px 2px;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left}
-.ti .d{margin-top:4px;width:10px;height:10px;border-radius:5px;flex:0 0 10px}
-.ti .tm{margin-left:auto;font-size:12px;color:var(--sub);white-space:nowrap}
-/* calendar */
-.cal{flex:1;display:flex;flex-direction:column;min-height:0}
-.calbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line)}
-.calbar h2{margin:0 auto;font-size:17px;font-weight:500}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.seg button{height:28px;padding:0 12px;border:0;background:var(--btn)} .seg button[aria-pressed="true"]{background:#5a5a60;color:#fff}
-.week{flex:1;overflow:auto;position:relative}
-.wgrid{display:grid;grid-template-columns:56px repeat(7,minmax(110px,1fr));min-width:820px}
-.whead{position:sticky;top:0;z-index:3;background:var(--bg);border-bottom:1px solid var(--line);padding:6px 4px;text-align:center;font-size:12px;color:var(--sub)}
-.whead.today{color:var(--red);font-weight:600}
-.allday{border-bottom:1px solid var(--line);min-height:26px;padding:2px;border-left:1px solid var(--grid)}
-.hcell{height:48px;border-top:1px solid var(--grid);font-size:11px;color:var(--sub);text-align:right;padding-right:6px}
-.dcol{position:relative;border-left:1px solid var(--grid)}
-.dcol.today{background:var(--today)}
-.slot{height:48px;border-top:1px solid var(--grid)}
-.blk{position:absolute;left:2px;right:2px;border-radius:6px;padding:3px 6px;font-size:11.5px;overflow:hidden;border:0;text-align:left;color:#fff;line-height:1.25}
-.adb{display:block;width:100%;border:0;border-radius:5px;padding:2px 6px;margin:1px 0;font-size:11.5px;text-align:left;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.nowline{position:absolute;left:0;right:0;height:2px;background:var(--red);z-index:2}
-.month{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-auto-rows:minmax(110px,1fr)}
-.mcell{border-right:1px solid var(--grid);border-bottom:1px solid var(--grid);padding:4px;min-width:0}
-.mcell .n{text-align:right;font-size:12px;color:var(--sub)} .mcell.out .n{opacity:.4} .mcell.today{background:var(--today)} .mcell.today .n{color:var(--red);font-weight:700}
-.more{border:0;background:transparent;color:var(--sub);font-size:11px;padding:0 4px}
-.listview{flex:1;overflow:auto;padding:10px 20px}
-/* modal */
-.scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;justify-content:center;align-items:flex-start;padding:40px 12px;overflow:auto;z-index:20}
-.sheet{width:100%;max-width:660px;background:var(--sheet);border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 50px var(--shadow);overflow:hidden}
-.sheet header{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--chrome);border-bottom:1px solid var(--line)}
-.sheet header h2{margin:0;font-size:15px;flex:1}
-.form{padding:16px 18px;display:grid;grid-template-columns:90px minmax(0,1fr);gap:11px 12px;align-items:center}
-.form label.l{text-align:right;color:var(--sub)}
-.form input[type=text],.form input[type=date],.form input[type=time],.form select,.form textarea{height:32px;border-radius:8px;border:1px solid var(--line);background:var(--field);padding:0 10px;box-sizing:border-box}
-.form textarea{height:auto;padding:8px 10px;resize:vertical}
-.res{margin-top:6px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.res .g{padding:5px 12px;font-size:11px;font-weight:600;color:var(--sub);background:var(--chrome)}
-.res button{display:flex;width:100%;justify-content:space-between;gap:10px;padding:8px 12px;border:0;border-top:1px solid var(--line);background:transparent;text-align:left}
-.res button:hover,.res button.hl{background:var(--btnOn)}
-.foot{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--line);background:var(--chrome)}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#2b2b30;color:#fff;padding:9px 14px;border-radius:10px;z-index:30;font-size:13px}
-.empty{padding:40px;text-align:center;color:var(--sub)}
-@media (max-width:820px){
-  .listpane{flex:1 1 100%;border-right:0}
-  main.split.has .listpane{display:none}
-  main.split:not(.has) .detail,main.split:not(.has) .activity{display:none}
-  .activity{flex:1 1 100%;border-left:0;border-top:1px solid var(--line)}
-  main{flex-wrap:wrap;overflow:auto}
-  .detail{padding:14px 16px}
-  .backbtn{display:inline-flex!important}
-}
-.backbtn{display:none}
-.acctTop{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start}.acctInfo{flex:1 1 340px;min-width:0}.acctOffices{flex:0 1 300px;min-width:240px;margin-top:6px}
-.office{border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:8px;font-size:12.5px}
-.ctab{width:100%;border-collapse:collapse;min-width:640px}.ctab th{text-align:left;font-weight:500;color:var(--sub);font-size:12px;padding:7px 12px;border-bottom:1px solid var(--line)}
-.ctab td{padding:7px 12px;border-bottom:1px solid var(--line);font-size:12.5px;vertical-align:top}.ctab tr:last-child td{border-bottom:0}.ctab tr.inactive td{opacity:.55}
-.adm{flex:1;overflow:auto;padding:20px 24px}
-.adm table{width:100%;border-collapse:collapse;min-width:820px}
-.adm th{text-align:left;font-weight:500;color:var(--sub);font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line)}
-.adm td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
-.adm tr.off td{opacity:.55}
-.badge{display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;background:var(--btnOn)}
-.badge.admin{background:var(--cStaff);color:var(--cStaffFg)} .badge.warn{background:var(--warnBg);color:var(--warnFg)}
-.adm .acts{display:flex;gap:6px;flex-wrap:wrap}.adm .acts .btn{height:28px;padding:0 9px;font-size:12px}
-.pwbox{font:600 22px/1.2 ui-monospace,Menlo,monospace;letter-spacing:1px;padding:14px;border-radius:10px;background:var(--btnOn);text-align:center;user-select:all}
-.gate{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
-.gate .card{width:100%;max-width:360px;background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:24px;box-shadow:0 10px 40px var(--shadow)}
-.gate h1{font-size:20px;margin:6px 0 4px}.gate label{display:block;margin:14px 0 4px;color:var(--sub)}
-.gate input{width:100%;box-sizing:border-box;height:40px;border-radius:9px;border:1px solid var(--line);background:var(--field);padding:0 12px;font-size:16px}
-.gate .btn{width:100%;height:42px;margin-top:18px;font-size:15px}
-.gate .err{color:var(--red);margin-top:10px;min-height:18px}
-.hint{margin-top:16px;padding:10px 12px;border-radius:10px;background:var(--btnOn);font-size:12.5px}
-</style>
-</head>
-<body>
-<div class="app" id="app"></div>
-<script>
-/* ---------- boot: auth, cached data, service worker ---------- */
-(function(){
-const API='/api', T='ezl_token', U='ezl_user', B='ezl_boot', BE='ezl_boot_etag', EV='ezl_events_raw', SN='ezl_since';
-const g=(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}};
-const p=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
-const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}
-try{const th=JSON.parse(localStorage.getItem('ezl_theme')||'""');if(th)document.documentElement.dataset.theme=th;}catch(e){}
-async function api(path,opt={}){
-  const t=g(T,'');
-  const r=await fetch(API+path,Object.assign({},opt,{headers:Object.assign({'Content-Type':'application/json'},t?{Authorization:'Bearer '+t}:{},opt.headers||{})}));
-  if(r.status===401){localStorage.removeItem(T);showLogin('Your session ended. Sign in again.');throw {code:401};}
-  return r;
-}
-function signOut(){localStorage.removeItem(T);localStorage.removeItem(U);location.reload();}
-const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const standalone=window.navigator.standalone||matchMedia('(display-mode: standalone)').matches;
-function showLogin(msg){
-  document.getElementById('app').innerHTML=`<div class="gate"><form class="card" id="lf">
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2f6fde" stroke-width="2.2" aria-hidden="true"><path d="M3 12h18M7 7l-4 5 4 5M17 7l4 5-4 5"/></svg>
-    <h1>EZLine CRM</h1><div class="muted">Sign in with the username and password Billy gave you.</div>
-    <label for="lu">Username</label><input id="lu" autocomplete="username" autocapitalize="none" autocorrect="off" placeholder="first.last" required>
-    <label for="lp">Password</label><input id="lp" type="password" autocomplete="current-password" required>
-    <button class="btn primary" type="submit">Sign in</button><div class="err" id="le">${esc(msg||'')}</div>
-    ${isIOS&&!standalone?'<div class="hint"><b>Put it on your Home Screen:</b> in Safari tap the Share button, then <b>Add to Home Screen</b>. It opens like an app and works without signal.</div>':''}
-  </form></div>`;
-  document.getElementById('lf').onsubmit=async e=>{e.preventDefault();const le=document.getElementById('le');le.textContent='Signing in…';
-    try{const r=await fetch(API+'/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('lu').value,password:document.getElementById('lp').value})});
-      const j=await r.json().catch(()=>({}));if(!r.ok){le.textContent=j.detail||'Sign-in failed';return;}
-      p(T,j.token);p(U,j.user);start();}
-    catch(err){le.textContent='No connection. Sign in once while online.';}};
-}
-function showPwChange(user){
-  const m=document.createElement('div');m.className='scrim';m.innerHTML=`<form class="sheet" style="max-width:380px"><header><h2>Set your own password</h2></header>
-    <div style="padding:16px 18px"><div class="muted">You're signed in with a temporary password. Pick your own (8+ characters).</div>
-    <div class="gate" style="padding:0;min-height:0;display:block"><label for="pc">Temporary password</label><input id="pc" type="password" autocomplete="current-password" required>
-    <label for="pn">New password</label><input id="pn" type="password" minlength="8" autocomplete="new-password" required><div class="err" id="pe"></div></div></div>
-    <div class="foot"><button class="btn primary" type="submit">Save password</button></div></form>`;
-  document.body.appendChild(m);
-  m.querySelector('form').onsubmit=async e=>{e.preventDefault();const pe=m.querySelector('#pe');
-    try{const r=await api('/password',{method:'POST',body:JSON.stringify({current:m.querySelector('#pc').value,new:m.querySelector('#pn').value})});
-      const j=await r.json().catch(()=>({}));if(!r.ok){pe.textContent=typeof j.detail==='string'?j.detail:'Use at least 8 characters';return;}
-      user.must_change=false;p(U,user);m.remove();}catch(err){pe.textContent='Needs a connection';}};
-}
-async function start(){
-  if(!g(T,'')){showLogin();return;}
-  const app=document.getElementById('app');app.innerHTML='<div class="empty">Loading EZLine…</div>';
-  let user=g(U,null);
-  try{const r=await api('/me');if(r.ok){user=await r.json();p(U,user);}}catch(e){if(e&&e.code===401)return;}
-  if(!user){showLogin();return;}
-  let boot=g(B,null);
-  try{const r=await api('/bootstrap',{headers:boot?{'If-None-Match':g(BE,'')}:{}});
-    if(r.status===200){boot=await r.json();p(B,boot);p(BE,r.headers.get('ETag')||'');}}catch(e){if(e&&e.code===401)return;}
-  if(!boot){app.innerHTML='<div class="empty">Connect to the internet once so EZLine can download your accounts.</div>';return;}
-  let raw=g(EV,null);
-  try{const r=await api('/events');if(r.ok){const j=await r.json();raw={};j.events.forEach(e=>raw[e.id]=e);p(EV,raw);p(SN,j.serverTime);}}catch(e){if(e&&e.code===401)return;}
-  raw=raw||{};
-  // index maps between FileMaker keys and in-app positions
-  const K={a:boot.accounts.map(a=>a[0]),c:boot.contacts.map(c=>c[0]),s:boot.staff.map(s=>s[0])};
-  const IX={a:new Map(K.a.map((k,i)=>[k,i])),c:new Map(K.c.map((k,i)=>[k,i])),s:new Map(K.s.map((k,i)=>[k,i]))};
-  const toIdx=att=>(att||[]).map(([t,k])=>[t,IX[t]?IX[t].get(String(k)):undefined]).filter(x=>x[1]!==undefined);
-  const fromServer=e=>({id:e.id,title:e.title,date:e.date,time:e.time||'',end:e.end||'',allDay:!e.time,cat:e.cat||'',loc:e.loc||'',notes:e.notes||'',deleted:!!e.deleted,att:toIdx(e.att),updatedAt:e.updatedAt,updatedBy:e.updatedBy});
-  const toServer=e=>({id:e.id,title:e.title,date:e.date,time:e.time||'',end:e.end||'',cat:e.cat||'',loc:e.loc||'',notes:e.notes||'',deleted:!!e.deleted,updatedAt:e.updatedAt,att:(e.att||[]).map(([t,i])=>[t,K[t][i]])});
-  const D={
-    accounts:boot.accounts.map(a=>[a[1],a[2]||'',a[3]!=null&&IX.a.has(a[3])?IX.a.get(a[3]):-1,a[4]!=null&&IX.a.has(a[4])?IX.a.get(a[4]):-1,a[5]||0,a[6]||0,a[7]||0,a[8]||'',a[9]||'',a[10]||'',a[11]||'',a[12]||'',a[13]||'']),
-    contacts:boot.contacts.map(c=>[c[1],c[2]!=null&&IX.a.has(c[2])?IX.a.get(c[2]):-1,c[3]||'',c[4]||'',c[5]||'',c[6]||'',c[7]||'',c[8]||'',c[9]||'',c[10]||'',c[11]||'',!!c[12],c[13]!==false]),
-    links:(boot.links||[]).map(l=>[IX.c.has(String(l[0]))?IX.c.get(String(l[0])):-1,IX.a.has(l[1])?IX.a.get(l[1]):-1,l[2]||0,l[3]||0,l[4]||0]).filter(l=>l[0]>=0&&l[1]>=0),
-    offices:(boot.offices||[]).map(o=>({id:o[0],a:IX.a.has(o[1])?IX.a.get(o[1]):-1,type:o[2]||'',address:o[3]||'',city:o[4]||'',state:o[5]||'',zip:o[6]||'',phone:o[7]||'',email:o[8]||'',notes:o[9]||'',source:o[10]||'web'})).filter(o=>o.a>=0),
-    staff:boot.staff.map(s=>[s[1],s[2]||'']),
-    events:Object.values(raw).map(fromServer)
-  };
-  window.__ezl={api,fromServer,toServer,signOut,user,akey:i=>K.a[i],
-    patchBootOffice(row,deleted){const b=g(B,null);if(!b)return;b.offices=(b.offices||[]).filter(o=>o[0]!==row[0]);if(!deleted)b.offices.push(row);p(B,b);},meIdx:user.staff_id&&IX.s.has(user.staff_id)?IX.s.get(user.staff_id):-1,
-    cacheRaw(list){const r=g(EV,{});list.forEach(e=>r[e.id]=e);p(EV,r);},
-    async pullSince(){const since=g(SN,'');const r=await api('/events'+(since?'?since='+encodeURIComponent(since):''));if(!r.ok)throw new Error('pull');const j=await r.json();
-      if(j.events.length){const rr=g(EV,{});j.events.forEach(e=>rr[e.id]=e);p(EV,rr);}p(SN,j.serverTime);return j.events;}};
-  window.__start(D);
-  if(user.must_change)showPwChange(user);
-}
-window.addEventListener('DOMContentLoaded',start);
-})();
-</script>
-<script>
-window.__start=function(D){
-'use strict';
-const ACC=D.accounts, CON=D.contacts, STF=D.staff;
-const TYPE={C:'Customer',U:'End user',G:'Engineering'};
-const CATC={'Luncheon':'#2f8f3a','Breakfast':'#2f8f3a','Dinner':'#2f8f3a','Lunch and learn':'#1c7c74','Outing':'#d4721c','Meeting':'#2f6fde','Site visit':'#1c7c74','Travel':'#6b6b72','Follow-up':'#7d4fc4','Trade show':'#b5487a','Company event':'#a8862a','Appointment':'#2f6fde'};
-const CATS=['Luncheon','Breakfast','Dinner','Lunch and learn','Meeting','Site visit','Outing','Trade show','Follow-up','Travel','Company event'];
-const catColor=c=>CATC[c]||'#5f6b7a';
-const $=(s,r=document)=>r.querySelector(s);
-const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money=n=>n?'$'+Math.round(n).toLocaleString('en-US'):'—';
-const pad=n=>String(n).padStart(2,'0');
-const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-const parseD=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);};
-const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
-const fmtTime=t=>{if(!t)return 'All-day';let [h,m]=t.split(':').map(Number);const ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+pad(m)+' '+ap;};
-const fmtDate=s=>parseD(s).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-const fmtLong=d=>d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
-const uuid=()=>(crypto.randomUUID?crypto.randomUUID():'e'+Date.now()+Math.random().toString(16).slice(2));
-const TODAY=iso(new Date());
+"""Pull accounts, contacts, contact<->account links and offices from FileMaker (Data API) into Postgres.
 
-/* ---------- store: seed + shared db + offline outbox ---------- */
-const LS_OUT='ezl_outbox_v1', LS_THEME='ezl_theme', LS_ME='ezl_me';
-const ls={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
-let remote={};                            // id -> newer server copies pulled since load
-let outbox=ls.get(LS_OUT,[]);             // [{id,body}] waiting to sync
-let dbState=navigator.onLine?'live':'local', syncing=false;
-const seedById={}; D.events.forEach(e=>{e.end=e.end||'';e.allDay=!e.time;seedById[e.id]=e;});
-function allEvents(){
-  const m=Object.assign({},seedById);
-  for(const id in remote) m[id]=remote[id];
-  for(const o of outbox) m[o.id]=o.body;
-  return Object.values(m).filter(e=>!e.deleted&&e.date);
-}
-let EVCACHE=null; const invalidate=()=>{EVCACHE=null;};
-function events(){ if(!EVCACHE){EVCACHE=allEvents().sort((a,b)=>(a.date+(a.time||'00:00')).localeCompare(b.date+(b.time||'00:00')));} return EVCACHE; }
-function saveEvent(body){
-  body.updatedAt=new Date().toISOString();
-  outbox=outbox.filter(o=>o.id!==body.id); outbox.push({id:body.id,body});
-  ls.set(LS_OUT,outbox); invalidate(); render(); flush();
-}
-const EZ=window.__ezl;
-async function flush(){
-  if(syncing||!outbox.length||!navigator.onLine){renderStatus();return;}
-  syncing=true; renderStatus();
-  while(outbox.length&&navigator.onLine){
-    const o=outbox[0];
-    try{
-      const r=await EZ.api('/events/'+encodeURIComponent(o.id),{method:'PUT',body:JSON.stringify(EZ.toServer(o.body))});
-      if(r.status>=500) throw new Error('server');
-      if(r.ok){const j=await r.json();EZ.cacheRaw([j.event]);remote[o.id]=EZ.fromServer(j.event);}
-      else toast('Could not save "'+o.body.title+'". Check it and try again.');
-      outbox.shift(); ls.set(LS_OUT,outbox); dbState='live';
-    }catch(e){ if(e&&e.code===401)break; dbState='local'; break; }
-  }
-  syncing=false; invalidate(); render();
-}
-async function pull(){
-  if(!navigator.onLine){renderStatus();return;}
-  try{const evs=await EZ.pullSince();if(evs.length){evs.forEach(e=>{remote[e.id]=EZ.fromServer(e);});invalidate();render();}dbState='live';}
-  catch(e){dbState='local';}
-  renderStatus();
-}
-setInterval(pull,60000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){flush();pull();}});
-window.addEventListener('online',()=>{dbState='live';flush();pull();});
-window.addEventListener('offline',()=>{dbState='local';renderStatus();});
-setTimeout(flush,400);
+READ-ONLY on FileMaker: this module only GETs records. No writes to FileMaker ever.
 
-/* ---------- indexes ---------- */
-const kids={}; ACC.forEach((a,i)=>{if(a[2]>=0){(kids[a[2]]=kids[a[2]]||[]).push(i);}});
-const conAccts=CON.map((c,i)=>new Set(c[1]>=0?[c[1]]:[]));
-const linkBy={}; D.links.forEach(l=>{conAccts[l[0]].add(l[1]);linkBy[l[1]+':'+l[0]]=l;});
-const conByAcct={}; conAccts.forEach((set,i)=>set.forEach(a=>(conByAcct[a]=conByAcct[a]||[]).push(i)));
-const OFF=D.offices; const offByAcct=a=>OFF.filter(o=>o.a===a);
-function family(i){const r=ACC[i][3]>=0?ACC[i][3]:i;const out=[];const walk=(n,d)=>{out.push([n,d]);(kids[n]||[]).sort((x,y)=>ACC[x][0].localeCompare(ACC[y][0])).forEach(k=>walk(k,d+1));};walk(r,0);return out;}
-const name=(t,i)=>t==='a'?(ACC[i]?ACC[i][0]:'Account'):t==='c'?(CON[i]?CON[i][0]:'Contact'):(STF[i]?STF[i][0]:'Staff');
-const acctOfContact=i=>CON[i]?CON[i][1]:-1;
-function evFor(kind,i,withFamily){
-  let accts=null;
-  if(kind==='a'){accts=new Set(withFamily?family(i).map(x=>x[0]):[i]);}
-  return events().filter(e=>e.att.some(([t,x])=>{
-    if(kind==='a') return (t==='a'&&accts.has(x))||(t==='c'&&[...(conAccts[x]||[])].some(a=>accts.has(a)));
-    return t===kind&&x===i;
-  }));
+  python -m app.fmsync run         incremental sync (full on first run, delta after)
+  python -m app.fmsync full        force full sync regardless of watermarks
+  python -m app.fmsync probe       fetch 3 rows per layout, print keys (no writes)
+
+Layouts used (all pre-existing in ez-line.fmp12):
+  API_CRM_Accounts     -> accounts       (z_Modification_Time)
+  API_BUYER            -> contacts       (z_Modification_Time)
+  API_CRM_BuyerAccount -> links          (no reliable timestamp -> always full replace)
+  CRM_AccountOffice    -> offices        (z_ModificationTimestamp)
+
+Watermarks stored in sync_watermarks table (created on first run).
+Overlap of 2 minutes applied to watermark to avoid missing boundary records.
+"""
+import json, os, re, sys, time, urllib.error, urllib.parse, urllib.request, ssl
+from datetime import datetime, timedelta
+from pathlib import Path
+import psycopg
+from dotenv import load_dotenv
+
+ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(ROOT / ".env")
+
+UUID_RE = re.compile(r"^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$")
+PAGE = 1000
+OVERLAP = timedelta(minutes=2)
+
+LAYOUTS = {
+    "accounts": "API_CRM_Accounts",
+    "contacts": "API_BUYER",
+    "links":    "API_CRM_BuyerAccount",
+    "offices":  "CRM_AccountOffice",
 }
 
-/* ---------- state + routing ---------- */
-const S={view:'team',calMode:'week',calDate:new Date(),calWho:-1,sel:{a:-1,c:-1,s:-1},q:{a:'',c:'',s:''},fam:true,teamWho:STF.map((s,i)=>i).filter(i=>/Outside Sales|Owner/.test(STF[i][1])||i===EZ.meIdx),modal:null};
-let theme=ls.get(LS_THEME,'');
-function applyTheme(){ if(theme)document.documentElement.dataset.theme=theme; else delete document.documentElement.dataset.theme; }
-applyTheme();
-function go(view,kind,i){S.view=view; if(kind)S.sel[kind]=i; render(); const m=$('main'); if(m)m.scrollTop=0;}
-window.__go=go;
-
-/* ---------- render ---------- */
-function renderStatus(){
-  const el=$('#status'); if(!el)return;
-  const n=outbox.length, on=navigator.onLine;
-  let txt,cls='';
-  if(!on){txt=n?('Offline, '+n+' waiting to sync'):'Offline, changes save here';cls='off';}
-  else if(syncing){txt='Syncing '+n+'…';}
-  else if(dbState==='live'){txt=n?n+' waiting to sync':'Online, synced';}
-  else if(dbState==='connecting'){txt='Connecting…';}
-  else {txt=n?'Server unreachable, '+n+' waiting':'Server unreachable';cls='off';}
-  el.className='pill '+cls; el.innerHTML='<span class="dot"></span>'+esc(txt);
-}
-function render(){
-  const app=$('#app');
-  const tabs=[['team','Team'],['cal','Calendar'],['a','Accounts'],['c','Contacts'],['s','Staff']].concat(EZ.user.is_admin?[['admin','Admin']]:[]);
-  app.innerHTML=`<header class="top">
-    <span class="brand"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" aria-hidden="true"><path d="M3 12h18M7 7l-4 5 4 5M17 7l4 5-4 5"/></svg>EZLine CRM</span>
-    <nav class="tabs" aria-label="Sections">${tabs.map(([k,l])=>`<button class="tab" data-tab="${k}" ${S.view===k?'aria-current="page"':''}>${l}</button>`).join('')}</nav>
-    <span class="spacer"></span>
-    <span id="status" class="pill"></span>
-    <button class="btn primary" data-new>+ New appointment</button>
-    <button class="btn" data-signout title="Sign out">${esc(EZ.user.display_name.split(' ')[0])} · Sign out</button>
-    <button class="btn icon" data-themebtn aria-label="Switch light or dark mode"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
-  </header><main id="main"></main>`;
-  const main=$('#main');
-  if(S.view==='team') renderTeam(main);
-  else if(S.view==='cal') renderCal(main);
-  else if(S.view==='admin') renderAdmin(main);
-  else renderEntity(main,S.view);
-  renderStatus();
-  if(S.modal) renderModal();
-}
-document.addEventListener('click',e=>{
-  const t=e.target.closest('[data-office],[data-signout],[data-tab],[data-new],[data-themebtn],[data-open],[data-goto],[data-cal],[data-calmode],[data-slot],[data-team],[data-fam],[data-back]');
-  if(!t)return;
-  if(t.dataset.office){openOffice(t.dataset.office);}
-  else if(t.hasAttribute('data-signout')){if(outbox.length&&!confirmOut())return;EZ.signOut();}
-  else if(t.dataset.tab){go(t.dataset.tab);}
-  else if(t.hasAttribute('data-new')){openEditor(null);}
-  else if(t.hasAttribute('data-themebtn')){const dark=matchMedia('(prefers-color-scheme: dark)').matches;const cur=theme||(dark?'dark':'light');theme=cur==='dark'?'light':'dark';ls.set(LS_THEME,theme);applyTheme();}
-  else if(t.dataset.open){openDetail(t.dataset.open);}
-  else if(t.dataset.goto){const [k,i]=t.dataset.goto.split(':');S.modal=null;go(k,k,+i);}
-  else if(t.dataset.cal){const n=+t.dataset.cal;if(n===0)S.calDate=new Date();else{const d=new Date(S.calDate);if(S.calMode==='month')d.setMonth(d.getMonth()+n);else d.setDate(d.getDate()+7*n);S.calDate=d;}render();}
-  else if(t.dataset.calmode){S.calMode=t.dataset.calmode;render();}
-  else if(t.dataset.slot){const [d,h]=t.dataset.slot.split('|');openEditor(null,{date:d,time:h?pad(+h)+':00':''});}
-  else if(t.dataset.team){const i=+t.dataset.team;const k=S.teamWho.indexOf(i);if(k>=0)S.teamWho.splice(k,1);else S.teamWho.push(i);render();}
-  else if(t.dataset.fam!=null){S.fam=!S.fam;render();}
-  else if(t.dataset.back){S.sel[S.view]=-1;render();}
-});
-
-/* ---------- team ---------- */
-function renderTeam(main){
-  const pick=STF.map((s,i)=>`<button class="chip ${S.teamWho.includes(i)?'s':''}" data-team="${i}" aria-pressed="${S.teamWho.includes(i)}">${esc(s[0].split(' ')[0])}</button>`).join('');
-  const start=parseD(TODAY), horizon=iso(addDays(start,13));
-  const cols=S.teamWho.map(i=>{
-    const evs=evFor('s',i).filter(e=>e.date>=TODAY&&e.date<=horizon);
-    const byDay={}; evs.forEach(e=>(byDay[e.date]=byDay[e.date]||[]).push(e));
-    const days=Object.keys(byDay).sort().slice(0,6);
-    const ini=STF[i][0].split(' ').map(x=>x[0]).join('').slice(0,2);
-    return `<section class="col"><div class="who"><span class="av">${esc(ini)}</span><div><button class="linkbtn" data-goto="s:${i}" style="font-size:20px">${esc(STF[i][0])}</button><div class="muted" style="font-size:12px">${esc(STF[i][1])}</div></div></div>
-      ${days.length?days.map(d=>{const lab=d===TODAY?'Today':d===iso(addDays(start,1))?'Tomorrow':fmtLong(parseD(d));
-        return `<div class="dayh"><span>${lab}</span><span class="muted">${byDay[d].length} item${byDay[d].length>1?'s':''}</span></div>`+byDay[d].map(teamItem).join('');}).join('')
-      :`<div class="dayh"><span>Next two weeks</span></div><div class="muted" style="padding:10px 0">Nothing scheduled</div>`}
-    </section>`;}).join('');
-  main.innerHTML=`<div style="display:flex;flex-direction:column;flex:1;min-height:0"><div class="calbar"><span class="muted">Show:</span><div class="chips">${pick}</div></div><div class="team">${cols||'<div class="empty">Pick team members above.</div>'}</div></div>`;
-}
-function teamItem(e){const n=e.att.length;return `<button class="ti" data-open="${esc(e.id)}"><span class="d" style="background:${catColor(e.cat)}"></span><span style="flex:1;min-width:0"><span style="display:block">${esc(e.title)}</span><span class="muted" style="display:block;font-size:12px">${esc(e.loc||e.cat||'')}${n>1?' · '+n+' invited':''}</span></span><span class="tm">${fmtTime(e.time)}</span></button>`;}
-
-/* ---------- calendar ---------- */
-function weekStart(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-x.getDay());return x;}
-function calEvents(){return S.calWho<0?events():evFor('s',S.calWho);}
-function renderCal(main){
-  const who=`<select id="calwho" class="btn" aria-label="Whose calendar">${['<option value="-1">Everyone</option>'].concat(STF.map((s,i)=>`<option value="${i}" ${S.calWho===i?'selected':''}>${esc(s[0])}</option>`)).join('')}</select>`;
-  let title,body;
-  if(S.calMode==='week'){
-    const ws=weekStart(S.calDate);const days=[...Array(7)].map((_,k)=>addDays(ws,k));
-    title=days[0].toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+days[6].toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-    const evs=calEvents();const H0=6,H1=21;
-    let g=`<div class="wgrid"><div class="whead"></div>${days.map(d=>`<div class="whead ${iso(d)===TODAY?'today':''}">${d.toLocaleDateString('en-US',{weekday:'short'})} ${d.getDate()}</div>`).join('')}`;
-    g+=`<div class="allday muted" style="font-size:11px;text-align:right;padding-right:6px;border-left:0">all-day</div>`+days.map(d=>{const ds=iso(d);return `<div class="allday">${evs.filter(e=>e.date===ds&&!e.time).map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${catColor(e.cat)}">${esc(e.title)}</button>`).join('')}</div>`;}).join('');
-    g+=`<div>${[...Array(H1-H0)].map((_,k)=>`<div class="hcell">${fmtTime(pad(H0+k)+':00').replace(':00','')}</div>`).join('')}</div>`;
-    g+=days.map(d=>{const ds=iso(d);const timed=evs.filter(e=>e.date===ds&&e.time);
-      const lanes=[];timed.forEach(e=>{const s=toMin(e.time),en=e.end?toMin(e.end):s+60;let L=0;while(lanes[L]&&lanes[L]>s)L++;lanes[L]=en;e._l=L;});
-      const n=Math.max(1,lanes.length);
-      const blocks=timed.map(e=>{const s=toMin(e.time),en=e.end?toMin(e.end):s+60;const top=Math.max(0,(s-H0*60))*48/60,h=Math.max(22,(en-s)*48/60);const w=100/n;
-        return `<button class="blk" data-open="${esc(e.id)}" style="top:${top}px;height:${h}px;left:calc(${e._l*w}% + 2px);width:calc(${w}% - 4px);background:${catColor(e.cat)}"><b>${fmtTime(e.time)}</b> ${esc(e.title)}</button>`;}).join('');
-      let nowl='';if(ds===TODAY){const nw=new Date();const m=nw.getHours()*60+nw.getMinutes();if(m>H0*60&&m<H1*60)nowl=`<div class="nowline" style="top:${(m-H0*60)*48/60}px"></div>`;}
-      return `<div class="dcol ${ds===TODAY?'today':''}">${[...Array(H1-H0)].map((_,k)=>`<div class="slot" data-slot="${ds}|${H0+k}" title="New appointment"></div>`).join('')}${blocks}${nowl}</div>`;}).join('');
-    body=`<div class="week" id="wk">${g}</div></div>`;
-  } else if(S.calMode==='month'){
-    const f=new Date(S.calDate.getFullYear(),S.calDate.getMonth(),1);const st=weekStart(f);title=f.toLocaleDateString('en-US',{month:'long',year:'numeric'});
-    const evs=calEvents();
-    body=`<div class="month">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div class="whead" style="position:static">${d}</div>`).join('')}${[...Array(42)].map((_,k)=>{const d=addDays(st,k),ds=iso(d);const es=evs.filter(e=>e.date===ds);
-      return `<div class="mcell ${d.getMonth()!==f.getMonth()?'out':''} ${ds===TODAY?'today':''}"><div class="n"><button class="more" data-slot="${ds}|" aria-label="New appointment on ${ds}">${d.getDate()}</button></div>${es.slice(0,3).map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${catColor(e.cat)}">${e.time?fmtTime(e.time).replace(':00','')+' ':''}${esc(e.title)}</button>`).join('')}${es.length>3?`<button class="more" data-calmode="list">+${es.length-3} more</button>`:''}</div>`;}).join('')}</div>`;
-  } else {
-    title='Upcoming';const evs=calEvents().filter(e=>e.date>=iso(addDays(new Date(),-30)));
-    body=`<div class="listview">${timeline(evs,false)}</div>`;
-  }
-  main.innerHTML=`<div class="cal"><div class="calbar">${who}<div class="seg">${[['week','Week'],['month','Month'],['list','List']].map(([k,l])=>`<button data-calmode="${k}" aria-pressed="${S.calMode===k}">${l}</button>`).join('')}</div>
-    <h2>${esc(title)}</h2><button class="btn icon" data-cal="-1" aria-label="Previous">‹</button><button class="btn" data-cal="0">Today</button><button class="btn icon" data-cal="1" aria-label="Next">›</button></div>${body}`;
-  $('#calwho').onchange=e=>{S.calWho=+e.target.value;render();};
-  const wk=$('#wk');if(wk)wk.scrollTop=48*1.5;
-}
-const toMin=t=>{const [h,m]=t.split(':').map(Number);return h*60+m;};
-
-/* ---------- timeline ---------- */
-function timeline(evs,newestFirst=true){
-  if(!evs.length)return '<div class="empty">No activity yet. Appointments this record is invited to show up here.</div>';
-  const list=evs.slice().sort((a,b)=>(b.date+(b.time||'')).localeCompare(a.date+(a.time||'')));
-  if(!newestFirst)list.reverse();
-  let out='',yr='',nowDone=false;
-  for(const e of list){
-    const y=e.date.slice(0,4);
-    if(newestFirst&&!nowDone&&e.date<=TODAY){out+='<div class="now"><i></i><span></span><em>Now</em></div>';nowDone=true;}
-    if(y!==yr){out+=`<h2 class="year">${e.date>TODAY&&newestFirst?'Upcoming':y}</h2>`;yr=e.date>TODAY&&newestFirst?'up':y; if(e.date<=TODAY&&yr==='up'){}}
-    const who=e.att.slice(0,6).map(([t,i])=>name(t,i)).join(', ')+(e.att.length>6?' +'+(e.att.length-6):'');
-    out+=`<article class="ev"><span class="bar" style="background:${catColor(e.cat)}"></span><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:8px"><button class="linkbtn t" data-open="${esc(e.id)}">${esc(e.title)}</button><span style="color:var(--year);font-size:12px;white-space:nowrap">${fmtDate(e.date)}${e.time?', '+fmtTime(e.time):''}</span></div>
-      <div class="meta">${esc(e.cat||'')}${e.loc?' at '+esc(e.loc):''}</div><div class="meta">${esc(who)}</div>${e.notes?`<p>${esc(e.notes.length>240?e.notes.slice(0,240)+'…':e.notes)}</p>`:''}</div></article>`;
-  }
-  return out;
+# FileMaker timestamp field per layout (None = no reliable ts, do full replace)
+TS_FIELD = {
+    "accounts": "z_Modification_Time",
+    "contacts": "z_Modification_Time",
+    "links":    None,
+    "offices":  "z_ModificationTimestamp",
 }
 
-/* ---------- entities ---------- */
-function renderEntity(main,k){
-  const q=S.q[k].trim().toLowerCase();
-  let rows;
-  if(k==='a'){
-    const act=new Set();events().forEach(e=>e.att.forEach(([t,i])=>{if(t==='a')act.add(i);if(t==='c'&&acctOfContact(i)>=0)act.add(acctOfContact(i));}));
-    let idx=ACC.map((a,i)=>i);
-    if(q.length>=2)idx=idx.filter(i=>ACC[i][0].toLowerCase().includes(q));
-    else idx=idx.filter(i=>act.has(i)||ACC[i][3]===i&&(kids[i]||[]).length).concat(idx.filter(i=>ACC[i][4]>0&&!act.has(i)).sort((x,y)=>ACC[y][4]-ACC[x][4]).slice(0,150));
-    idx=[...new Set(idx)].slice(0,300);
-    rows=idx.map(i=>{const a=ACC[i];const sub=a[2]>=0?'Parent: '+ACC[a[2]][0]:(kids[i]||[]).length?(kids[i].length+' subsidiaries'):(a[1].split('').map(c=>TYPE[c]).join(', ')||'Account');
-      return `<button class="row ${S.sel.a===i?'on':''}" data-goto="a:${i}" style="border-left-color:${act.has(i)?'var(--green)':'transparent'}"><div>${esc(a[0])}</div><div class="s">${esc(sub)}</div></button>`;}).join('');
-  } else if(k==='c'){
-    let idx=CON.map((c,i)=>i);if(q.length>=2)idx=idx.filter(i=>(CON[i][0]+' '+(CON[i][1]>=0?ACC[CON[i][1]][0]:'')).toLowerCase().includes(q));
-    idx.sort((x,y)=>CON[x][0].localeCompare(CON[y][0]));
-    rows=idx.slice(0,400).map(i=>`<button class="row ${S.sel.c===i?'on':''}" data-goto="c:${i}"><div>${esc(CON[i][0])}</div><div class="s">${esc([CON[i][2],CON[i][1]>=0?ACC[CON[i][1]][0]:'No account'].filter(Boolean).join(' · '))}</div></button>`).join('');
-  } else {
-    rows=STF.map((s,i)=>i).filter(i=>!q||STF[i][0].toLowerCase().includes(q)).map(i=>`<button class="row ${S.sel.s===i?'on':''}" data-goto="s:${i}"><div>${esc(STF[i][0])}</div><div class="s">${esc(STF[i][1])}</div></button>`).join('');
-  }
-  const ph={a:'Search '+ACC.length.toLocaleString('en-US')+' accounts',c:'Search contacts or company',s:'Search staff'}[k];
-  const sel=S.sel[k];
-  main.className='split'+(sel>=0?' has':'');
-  main.innerHTML=`<section class="listpane" aria-label="List"><div class="listhead"><input class="search" id="q" type="search" placeholder="${ph}" value="${esc(S.q[k])}" aria-label="${ph}"></div><div class="list">${rows||'<div class="empty">No matches</div>'}</div></section>
-    ${sel>=0?detailHtml(k,sel):'<section class="detail"><div class="empty">Pick a record on the left.</div></section>'}`;
-  const qi=$('#q');qi.oninput=e=>{S.q[k]=e.target.value;const pos=e.target.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(pos,pos);};
-}
-function detailHtml(k,i){
-  const back=`<button class="btn backbtn" data-back>‹ Back</button>`;
-  if(k==='a'){
-    const a=ACC[i];const fam=family(i);const root=fam[0][0];
-    const famTot=fam.reduce((t,[n])=>{t[0]+=ACC[n][4];t[1]+=ACC[n][5];t[2]+=ACC[n][6];return t;},[0,0,0]);
-    const evs=evFor('a',i,S.fam);
-    const people=(conByAcct[i]||[]).slice().sort((x,y)=>{const lx=linkBy[i+':'+x],ly=linkBy[i+':'+y];return ((ly?ly[2]+ly[3]:0)-(lx?lx[2]+lx[3]:0))||CON[x][0].localeCompare(CON[y][0]);});
-    const offs=offByAcct(i);
-    const addr=[a[8],[a[9],a[10]].filter(Boolean).join(', ')+(a[11]?' '+a[11]:'')].filter(x=>x&&x.trim()).join('<br>');
-    const officeCard=o=>`<div class="office"><div style="display:flex;gap:8px;align-items:center"><span class="badge">${esc(o.type||'Office')}</span><span class="spacer"></span>
-        <button class="linkbtn muted" style="font-size:12px" data-office="${esc(o.id)}">Edit</button></div>
-        <div style="margin-top:5px">${esc(o.address)}${o.address?'<br>':''}${esc([o.city,o.state].filter(Boolean).join(', '))}${o.zip?' '+esc(o.zip):''}</div>
-        ${o.phone?`<div><a href="tel:${esc(o.phone.replace(/[^0-9+]/g,''))}">${esc(o.phone)}</a></div>`:''}${o.email?`<div><a href="mailto:${esc(o.email)}">${esc(o.email)}</a></div>`:''}
-        ${o.address||o.city?`<div><a target="_blank" rel="noopener" href="https://maps.apple.com/?q=${encodeURIComponent([o.address,o.city,o.state,o.zip].filter(Boolean).join(' '))}">Map</a></div>`:''}
-        ${o.notes?`<div class="muted" style="font-size:12px;margin-top:3px">${esc(o.notes)}</div>`:''}</div>`;
-    const tel=v=>v?`<a href="tel:${esc(v.replace(/[^0-9+]/g,''))}">${esc(v)}</a>`:'';
-    return `<section class="detail pane">${back}
-      <div class="acctTop"><div class="acctInfo">
-      <div style="display:flex;gap:14px;align-items:flex-start;margin-top:6px"><div style="width:56px;height:56px;border-radius:10px;background:var(--btnOn);display:flex;align-items:center;justify-content:center;flex:0 0 56px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--sub)" stroke-width="1.6" aria-hidden="true"><path d="M4 21V5l8-2v18M12 8h8v13M7 8h2M7 12h2M7 16h2M15 12h2M15 16h2M2 21h20"/></svg></div>
-      <div><h1>${esc(a[0])}</h1><div class="muted" style="margin-top:3px">${fam.length>1?(root===i?'Root account with '+(fam.length-1)+' in family':'Part of the '+esc(ACC[root][0])+' family'):'Independent account'}</div>
-      <div class="chips" style="margin-top:8px">${a[1].split('').filter(Boolean).map(c=>`<span class="chip">${TYPE[c]}</span>`).join('')}</div></div></div>
-      <dl class="kv">${addr?`<dt>main</dt><dd>${addr}</dd>`:''}${a[12]?`<dt>web</dt><dd><a target="_blank" rel="noopener" href="${esc(/^https?:/.test(a[12])?a[12]:'https://'+a[12])}">${esc(a[12])}</a></dd>`:''}
-      <dt>sales YTD</dt><dd><b>${money(a[4])}</b>${fam.length>1?` <span class="muted">· family ${money(famTot[0])}</span>`:''}</dd>
-      <dt>prior year</dt><dd>${money(a[5])}${fam.length>1?` <span class="muted">· family ${money(famTot[1])}</span>`:''}</dd>
-      <dt>quotes YTD</dt><dd>${money(a[6])}${fam.length>1?` <span class="muted">· family ${money(famTot[2])}</span>`:''}</dd>
-      <dt>last order</dt><dd>${a[7]?fmtDate(a[7]):'—'}</dd>
-      ${a[2]>=0?`<dt>parent</dt><dd><button class="linkbtn" data-goto="a:${a[2]}" style="color:var(--accent)">${esc(ACC[a[2]][0])}</button></dd>`:''}</dl></div>
-      <div class="acctOffices"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><b style="flex:1">Offices</b><button class="btn" data-office="new:${i}">+ Add office</button></div>
-        ${offs.length?offs.map(officeCard).join(''):'<div class="muted" style="font-size:12.5px;padding:8px 0">No offices yet. Add the HQ, accounting or sales office addresses here.</div>'}</div></div>
-      ${people.length?`<div class="box"><div class="boxhead"><b>Contacts</b><span class="muted">${people.length}</span><span class="spacer"></span></div><div style="overflow-x:auto"><table class="ctab"><thead><tr><th>Name</th><th>Mobile</th><th>Direct</th><th>Email</th><th class="num">Sales YTD</th><th class="num">Prior yr</th><th class="num">Quotes YTD</th></tr></thead><tbody>
-        ${people.map(c=>{const C=CON[c],L=linkBy[i+':'+c];return `<tr class="${C[12]?'':'inactive'}"><td><button class="linkbtn" data-goto="c:${c}"><b>${esc(C[0])}</b></button>${C[2]?`<div class="muted" style="font-size:12px">${esc(C[2])}</div>`:''}</td><td>${tel(C[5])}</td><td>${tel(C[4])}</td><td>${C[3]?`<a href="mailto:${esc(C[3])}">${esc(C[3])}</a>`:''}</td><td class="num">${L&&L[2]?money(L[2]):''}</td><td class="num">${L&&L[3]?money(L[3]):''}</td><td class="num">${L&&L[4]?money(L[4]):''}</td></tr>`;}).join('')}</tbody></table></div></div>`:''}
-      ${fam.length>1?`<div class="box"><div class="boxhead"><b>Company family</b><span class="muted">parent, children and grandchildren</span><span class="spacer"></span><span class="muted" style="font-size:12px;width:86px;text-align:right">Sales YTD</span><span class="muted" style="font-size:12px;width:92px;text-align:right">Last order</span></div>
-        <div style="max-height:320px;overflow:auto">${fam.map(([n,d])=>`<div class="frow" style="${n===i?'background:var(--btnOn)':''}"><span style="width:${d*16}px;flex:0 0 ${d*16}px"></span><span class="muted" style="width:14px">${d?'└':'◆'}</span><button class="linkbtn" data-goto="a:${n}" style="flex:1;min-width:0;${d?'':'font-weight:600'}">${esc(ACC[n][0])}</button><span class="num" style="width:86px">${money(ACC[n][4])}</span><span class="num muted" style="width:92px">${ACC[n][7]?fmtDate(ACC[n][7]):'—'}</span></div>`).join('')}</div></div>`:''}
-    </section><aside class="activity pane"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">All activity</b>${fam.length>1?`<label class="muted" style="font-size:12px;display:flex;gap:6px;align-items:center"><input type="checkbox" data-fam ${S.fam?'checked':''}>Whole family</label>`:''}</div>${timeline(evs)}</aside>`;
-  }
-  if(k==='c'){
-    const c=CON[i];const evs=evFor('c',i);
-    const tel=v=>v?`<a href="tel:${esc(v.replace(/[^0-9+]/g,''))}">${esc(v)}</a>`:'—';
-    const accts=[...conAccts[i]].sort((x,y)=>{const lx=linkBy[x+':'+i],ly=linkBy[y+':'+i];return (ly?ly[2]+ly[3]:0)-(lx?lx[2]+lx[3]:0);});
-    const addr=[c[6],[c[7],c[8]].filter(Boolean).join(', ')+(c[9]?' '+c[9]:'')].filter(x=>x&&x.trim()).join('<br>');
-    return `<section class="detail pane">${back}<div style="display:flex;gap:14px;align-items:flex-start;margin-top:6px">
-      <div style="width:56px;height:56px;border-radius:28px;background:var(--btnOn);display:flex;align-items:center;justify-content:center;flex:0 0 56px;font-weight:600;font-size:18px;color:var(--sub)">${esc(c[0].split(' ').map(x=>x[0]).join('').slice(0,2))}</div>
-      <div><h1>${esc(c[0])}</h1>${c[2]?`<div class="muted">${esc(c[2])}</div>`:''}<div class="chips" style="margin-top:6px">${c[12]?'':'<span class="chip">Inactive</span>'}${c[11]?'<span class="chip">Works remote</span>':''}</div></div></div>
-      <dl class="kv"><dt>account</dt><dd>${c[1]>=0?`<button class="linkbtn" data-goto="a:${c[1]}" style="color:var(--accent)">${esc(ACC[c[1]][0])}</button>`:'—'}</dd>
-      <dt>mobile</dt><dd>${tel(c[5])}</dd><dt>direct</dt><dd>${tel(c[4])}</dd>
-      <dt>email</dt><dd>${c[3]?`<a href="mailto:${esc(c[3])}">${esc(c[3])}</a>`:'—'}</dd>
-      ${addr?`<dt>work</dt><dd>${addr}</dd>`:''}${c[10]?`<dt>LinkedIn</dt><dd><a target="_blank" rel="noopener" href="${esc(/^https?:/.test(c[10])?c[10]:'https://'+c[10])}">Profile</a></dd>`:''}
-      <dt>appointments</dt><dd>${evs.length}</dd></dl>
-      ${accts.length?`<div class="box"><div class="boxhead"><b>Accounts</b><span class="muted">${accts.length}</span><span class="spacer"></span><span class="muted" style="font-size:12px;width:86px;text-align:right">Sales YTD</span><span class="muted" style="font-size:12px;width:86px;text-align:right">Prior yr</span></div>
-        ${accts.map(a=>{const L=linkBy[a+':'+i];return `<div class="frow"><button class="linkbtn" data-goto="a:${a}" style="flex:1;min-width:0">${esc(ACC[a][0])}${a===c[1]?' <span class="muted">(current)</span>':''}</button><span class="num" style="width:86px">${L&&L[2]?money(L[2]):'—'}</span><span class="num" style="width:86px">${L&&L[3]?money(L[3]):'—'}</span></div>`;}).join('')}</div>`:''}
-      </section><aside class="activity pane"><b>All activity</b>${timeline(evs)}</aside>`;
-  }
-  const s=STF[i];const evs=evFor('s',i);const up=evs.filter(e=>e.date>=TODAY).length;
-  const acctCount=new Set();evs.forEach(e=>e.att.forEach(([t,x])=>{if(t==='a')acctCount.add(x);}));
-  return `<section class="detail pane">${back}<h1 style="margin-top:6px">${esc(s[0])}</h1><div class="muted">${esc(s[1])}</div>
-    <dl class="kv"><dt>appointments</dt><dd>${evs.length} total, ${up} upcoming</dd><dt>accounts met</dt><dd>${acctCount.size}</dd></dl>
-    ${acctCount.size?`<div class="box"><div class="boxhead"><b>Accounts in their history</b></div><div style="padding:10px 14px" class="chips">${[...acctCount].map(a=>`<button class="chip a" data-goto="a:${a}">${esc(ACC[a][0])}</button>`).join('')}</div></div>`:''}
-    </section><aside class="activity pane"><b>All activity</b>${timeline(evs)}</aside>`;
-}
-document.addEventListener('change',e=>{if(e.target.matches('[data-fam]')){S.fam=e.target.checked;render();}});
-
-/* ---------- offices ---------- */
-const OFFICE_TYPES=['Headquarters','Admin','Accounting','Sales','Engineering','Field / Yard','Shipping & Receiving','Other'];
-function openOffice(ref){
-  let o,acct;
-  if(ref.startsWith('new:')){acct=+ref.slice(4);o={id:uuid(),a:acct,type:'Headquarters',address:'',city:'',state:'',zip:'',phone:'',email:'',notes:'',isNew:true};}
-  else{const f=OFF.find(x=>x.id===ref);if(!f)return;o=Object.assign({},f);acct=o.a;}
-  let m=$('#modal');if(!m){m=document.createElement('div');m.id='modal';document.body.appendChild(m);}
-  const types=OFFICE_TYPES.includes(o.type)||!o.type?OFFICE_TYPES:[o.type].concat(OFFICE_TYPES);
-  m.innerHTML=`<div class="scrim" data-scrim><form class="sheet" role="dialog" aria-modal="true" aria-label="Office" style="max-width:540px"><header><h2>${o.isNew?'Add office':'Edit office'} · ${esc(ACC[acct][0])}</h2><button type="button" class="btn icon" id="of_x" aria-label="Close">✕</button></header>
-    ${navigator.onLine?'':'<div style="padding:9px 16px;background:var(--warnBg);color:var(--warnFg)">Offices need a connection to save. Try again when you are back online.</div>'}
-    <div class="form">
-      <label class="l" for="of_type">Type</label><select id="of_type">${types.map(t=>`<option ${t===o.type?'selected':''}>${esc(t)}</option>`).join('')}</select>
-      <label class="l" for="of_addr">Address</label><input type="text" id="of_addr" value="${esc(o.address)}" placeholder="Street, suite">
-      <label class="l" for="of_city">City / ST / Zip</label><div style="display:flex;gap:8px"><input type="text" id="of_city" value="${esc(o.city)}" placeholder="City" style="flex:1;min-width:0"><input type="text" id="of_state" value="${esc(o.state)}" placeholder="ST" style="width:60px"><input type="text" id="of_zip" value="${esc(o.zip)}" placeholder="Zip" style="width:90px" inputmode="numeric"></div>
-      <label class="l" for="of_phone">Phone</label><input type="text" id="of_phone" value="${esc(o.phone)}" inputmode="tel" placeholder="Main line for this office">
-      <label class="l" for="of_email">Email</label><input type="text" id="of_email" value="${esc(o.email)}" inputmode="email" placeholder="e.g. ap@company.com">
-      <label class="l" for="of_notes" style="align-self:start;padding-top:7px">Notes</label><textarea id="of_notes" rows="3" placeholder="Hours, gate code, who to ask for">${esc(o.notes)}</textarea>
-    </div><div class="foot">${o.isNew?'':'<button type="button" class="btn" id="of_del" style="margin-right:auto">Delete</button>'}<button type="button" class="btn" id="of_cancel">Cancel</button><button class="btn primary" type="submit">Save office</button></div></form></div>`;
-  const close=()=>m.remove();$('#of_x').onclick=close;$('#of_cancel').onclick=close;
-  m.querySelector('[data-scrim]').onclick=ev=>{if(ev.target===ev.currentTarget)close();};
-  const save=async(deleted)=>{
-    if(!navigator.onLine){toast('Offices need a connection to save');return;}
-    const body={account_id:EZ.akey(acct),office_type:$('#of_type').value,address:$('#of_addr').value,city:$('#of_city').value,state:$('#of_state').value,zip:$('#of_zip').value,phone:$('#of_phone').value,email:$('#of_email').value,notes:$('#of_notes').value};
-    try{
-      const r=deleted?await EZ.api('/offices/'+encodeURIComponent(o.id),{method:'DELETE'}):await EZ.api('/offices/'+encodeURIComponent(o.id),{method:'PUT',body:JSON.stringify(body)});
-      const j=await r.json().catch(()=>({}));
-      if(!r.ok){toast(typeof j.detail==='string'?j.detail:'Could not save the office');return;}
-      const k=OFF.findIndex(x=>x.id===o.id);if(k>=0)OFF.splice(k,1);
-      if(!deleted){OFF.push({id:o.id,a:acct,type:body.office_type,address:body.address,city:body.city,state:body.state,zip:body.zip,phone:body.phone,email:body.email,notes:body.notes,source:'web'});EZ.patchBootOffice(j.office,false);}
-      else EZ.patchBootOffice([o.id],true);
-      close();render();toast(deleted?'Office removed':'Office saved');
-    }catch(e){if(!(e&&e.code===401))toast('No connection. The office was not saved.');}
-  };
-  m.querySelector('form').onsubmit=e=>{e.preventDefault();save(false);};
-  const del=$('#of_del');if(del)del.onclick=()=>{if(!del.dataset.armed){del.dataset.armed='1';del.textContent='Tap again to delete';del.style.color='var(--red)';return;}save(true);};
-  $('#of_addr').focus();
+TYPE_CODES = {
+    "customer": "C", "enduser": "U", "end user": "U",
+    "engref": "G", "engineering": "G", "engineering company": "G",
 }
 
-/* ---------- admin ---------- */
-let ADM=null, admBusy=false;
-async function loadAdmin(){
-  admBusy=true;
-  try{const r=await EZ.api('/admin/users');ADM=r.ok?await r.json():{error:(await r.json().catch(()=>({}))).detail||'Could not load users'};}
-  catch(e){if(!(e&&e.code===401))ADM={error:'You need a connection to manage users.'};}
-  admBusy=false; if(S.view==='admin')render();
-}
-function renderAdmin(main){
-  if(!ADM){main.innerHTML='<div class="empty">Loading people…</div>';if(!admBusy)loadAdmin();return;}
-  if(ADM.error){main.innerHTML=`<div class="empty">${esc(ADM.error)} <button class="btn" data-adm="reload">Try again</button></div>`;wireAdmin(main);return;}
-  const staffName=id=>{const s=ADM.staff.find(x=>x.id===id);return s?s.name:'';};
-  const linked=new Set(ADM.users.map(u=>u.staff_id).filter(Boolean));
-  const when=t=>t?new Date(t).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Never';
-  const rows=ADM.users.map(u=>{const me=u.username===ADM.me;
-    const staffSel=`<select class="btn" data-adm-staff="${esc(u.username)}" aria-label="Staff record for ${esc(u.display_name)}" style="max-width:190px">
-      <option value="">No staff record</option>${ADM.staff.filter(s=>s.id===u.staff_id||!linked.has(s.id)).map(s=>`<option value="${esc(s.id)}" ${s.id===u.staff_id?'selected':''}>${esc(s.name)}</option>`).join('')}</select>`;
-    return `<tr class="${u.disabled?'off':''}"><td><b>${esc(u.display_name)}</b>${me?' <span class="muted">(you)</span>':''}</td><td>${esc(u.username)}</td><td>${staffSel}</td>
-      <td>${u.is_admin?'<span class="badge admin">Admin</span>':'<span class="badge">User</span>'} ${u.disabled?'<span class="badge">Turned off</span>':''} ${u.must_change&&!u.disabled?'<span class="badge warn">Temp password</span>':''}</td>
-      <td class="muted">${when(u.last_login)}</td>
-      <td><div class="acts"><button class="btn" data-adm="reset" data-u="${esc(u.username)}">Reset password</button>
-      ${me?'':`<button class="btn" data-adm="${u.is_admin?'unadmin':'admin'}" data-u="${esc(u.username)}">${u.is_admin?'Remove admin':'Make admin'}</button>
-      <button class="btn" data-adm="${u.disabled?'enable':'disable'}" data-u="${esc(u.username)}">${u.disabled?'Turn on':'Turn off'}</button>`}</div></td></tr>`;}).join('');
-  main.innerHTML=`<div class="adm"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px"><h1 style="flex:1">People and logins</h1>
-    <span class="muted">${ADM.users.filter(u=>!u.disabled).length} active of ${ADM.users.length}</span><button class="btn primary" data-adm="new">+ Add person</button></div>
-    <div style="overflow-x:auto"><table><thead><tr><th>Name</th><th>Username</th><th>Staff record (calendar)</th><th>Access</th><th>Last sign-in</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
-    <p class="muted" style="font-size:12px;margin-top:14px">Turning someone off signs them out everywhere and blocks sign-in; their appointments and history stay. A staff record is what puts a person on the Team view and in the invitee list.</p></div>`;
-  wireAdmin(main);
-}
-async function admCall(path,opt,okMsg){
-  try{const r=await EZ.api(path,opt);const j=await r.json().catch(()=>({}));
-    if(!r.ok){toast(typeof j.detail==='string'?j.detail:'That did not work');return null;}
-    if(okMsg)toast(okMsg);return j;}
-  catch(e){if(!(e&&e.code===401))toast('You need a connection for that.');return null;}
-}
-function showTempPw(name,username,pw){
-  let m=$('#modal');if(!m){m=document.createElement('div');m.id='modal';document.body.appendChild(m);}
-  m.innerHTML=`<div class="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="Temporary password" style="max-width:420px"><header><h2>Temporary password for ${esc(name)}</h2></header>
-    <div style="padding:16px 18px"><div class="muted" style="margin-bottom:10px">Username <b style="color:var(--text)">${esc(username)}</b>. This password is shown <b>once</b>; they choose their own the first time they sign in.</div>
-    <div class="pwbox" id="pwv">${esc(pw)}</div></div>
-    <div class="foot"><button class="btn" id="pwcopy">Copy username and password</button><button class="btn primary" id="pwdone">Done</button></div></div></div>`;
-  $('#pwcopy').onclick=async()=>{try{await navigator.clipboard.writeText(`https://ezlcal.alamark.com\nUsername: ${username}\nTemporary password: ${pw}`);toast('Copied');}catch(e){toast('Select the password and copy it');}};
-  $('#pwdone').onclick=()=>{m.remove();};
-}
-function newPersonSheet(){
-  let m=$('#modal');if(!m){m=document.createElement('div');m.id='modal';document.body.appendChild(m);}
-  const linked=new Set(ADM.users.map(u=>u.staff_id).filter(Boolean));
-  const free=ADM.staff.filter(s=>!linked.has(s.id)&&s.active);
-  m.innerHTML=`<div class="scrim" data-scrim><form class="sheet" role="dialog" aria-modal="true" aria-label="Add person" style="max-width:520px"><header><h2>Add person</h2><button type="button" class="btn icon" id="np_x" aria-label="Close">✕</button></header>
-    <div class="form">
-      <label class="l" for="np_name">Name</label><input type="text" id="np_name" required placeholder="First Last">
-      <label class="l" for="np_user">Username</label><input type="text" id="np_user" required autocapitalize="none" placeholder="first.last">
-      <label class="l" for="np_staff">Calendar</label><select id="np_staff">
-        <option value="__new">Add as a new staff member</option>
-        ${free.map(s=>`<option value="${esc(s.id)}">Link to existing: ${esc(s.name)}</option>`).join('')}
-        <option value="">No calendar (sign-in only)</option></select>
-      <label class="l" for="np_dept">Department</label><input type="text" id="np_dept" placeholder="e.g. Outside Sales">
-      <span></span><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="np_admin">Administrator (can add and manage people)</label>
-    </div><div class="foot"><button type="button" class="btn" id="np_cancel">Cancel</button><button class="btn primary" type="submit">Create login</button></div></form></div>`;
-  const nm=$('#np_name'),un=$('#np_user');let touched=false;
-  nm.oninput=()=>{if(touched)return;const p=nm.value.trim().toLowerCase().replace(/[^a-z0-9 ]/g,'').split(/\s+/).filter(Boolean);un.value=p.length>1?p[0]+'.'+p[p.length-1]:(p[0]||'');};
-  un.oninput=()=>{touched=true;};
-  const st=$('#np_staff'),dp=$('#np_dept');st.onchange=()=>{dp.disabled=st.value!=='__new';};
-  const close=()=>m.remove();$('#np_x').onclick=close;$('#np_cancel').onclick=close;
-  m.querySelector('form').onsubmit=async e=>{e.preventDefault();
-    const body={username:un.value.trim(),display_name:nm.value.trim(),is_admin:$('#np_admin').checked};
-    if(st.value==='__new')body.new_staff_dept=dp.value.trim();else if(st.value)body.staff_id=st.value;
-    const j=await admCall('/admin/users',{method:'POST',body:JSON.stringify(body)});
-    if(j){m.remove();ADM=null;loadAdmin();showTempPw(body.display_name,j.username,j.temp_password);
-      if(st.value==='__new')toast('New staff appear on the Team view after the next app refresh');}
-  };
-  nm.focus();
-}
-function wireAdmin(main){
-  main.querySelectorAll('[data-adm]').forEach(b=>b.onclick=async()=>{
-    const a=b.dataset.adm,u=b.dataset.u;
-    if(a==='reload'){ADM=null;render();return;}
-    if(a==='new'){newPersonSheet();return;}
-    const user=ADM.users.find(x=>x.username===u);
-    if(a==='reset'){if(!b.dataset.armed){b.dataset.armed='1';b.textContent='Tap again to reset';b.style.color='var(--red)';return;}
-      const j=await admCall('/admin/users/'+encodeURIComponent(u)+'/reset',{method:'POST'});if(j){showTempPw(user.display_name,u,j.temp_password);ADM=null;loadAdmin();}return;}
-    const patch={admin:{is_admin:true},unadmin:{is_admin:false},disable:{disabled:true},enable:{disabled:false}}[a];
-    if(a==='disable'&&!b.dataset.armed){b.dataset.armed='1';b.textContent='Tap again to turn off';b.style.color='var(--red)';return;}
-    const j=await admCall('/admin/users/'+encodeURIComponent(u),{method:'PATCH',body:JSON.stringify(patch)},{admin:'Now an admin',unadmin:'Admin removed',disable:'Turned off',enable:'Turned on'}[a]);
-    if(j){ADM=null;loadAdmin();}
-  });
-  main.querySelectorAll('[data-adm-staff]').forEach(sel=>sel.onchange=async()=>{
-    const u=sel.dataset.admStaff;const body=sel.value?{staff_id:sel.value}:{unlink_staff:true};
-    const j=await admCall('/admin/users/'+encodeURIComponent(u),{method:'PATCH',body:JSON.stringify(body)},'Staff record updated');
-    ADM=null;loadAdmin();
-  });
-}
+# ---------- helpers ----------
+def s(v):
+    return "" if v is None else str(v).strip().replace(chr(0), "")
 
-/* ---------- event detail + editor ---------- */
-function getEv(id){return events().find(e=>e.id===id);}
-function openDetail(id){S.modal={mode:'view',id};renderModal();}
-function openEditor(id,preset){
-  const base=id?JSON.parse(JSON.stringify(getEv(id))):{id:uuid(),title:'',date:TODAY,time:'11:00',end:'',cat:'Luncheon',loc:'',notes:'',att:EZ.meIdx>=0?[['s',EZ.meIdx]]:[]};
-  if(preset)Object.assign(base,preset);
-  S.modal={mode:'edit',ev:base,q:'',hl:0,isNew:!id};renderModal();
-  setTimeout(()=>{const t=$('#f_title');if(t&&!id)t.focus();},30);
-}
-function closeModal(){S.modal=null;const m=$('#modal');if(m)m.remove();}
-function group(att){const g={s:[],a:[],c:[]};att.forEach(([t,i])=>g[t].push(i));return g;}
-function renderModal(){
-  let m=$('#modal');if(!m){m=document.createElement('div');m.id='modal';document.body.appendChild(m);}
-  const M=S.modal;if(!M){m.remove();return;}
-  if(M.mode==='view'){
-    const e=getEv(M.id);if(!e){closeModal();return;}
-    const g=group(e.att);
-    const sect=(t,lab)=>g[t].length?`<div style="margin-top:12px"><div class="muted" style="font-size:12px;margin-bottom:5px">${lab} (${g[t].length})</div><div class="chips">${g[t].map(i=>`<button class="chip ${t}" data-goto="${t}:${i}">${esc(name(t,i))}${t==='c'&&acctOfContact(i)>=0?' <span style="opacity:.7">· '+esc(ACC[acctOfContact(i)][0])+'</span>':''}</button>`).join('')}</div></div>`:'';
-    m.innerHTML=`<div class="scrim" data-scrim><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(e.title)}"><header><span style="width:12px;height:12px;border-radius:6px;background:${catColor(e.cat)}"></span><h2>${esc(e.title)}</h2><button class="btn" id="m_edit">Edit</button><button class="btn icon" id="m_x" aria-label="Close">✕</button></header>
-      <div style="padding:16px 18px"><div><b>${fmtLong(parseD(e.date))}</b>, ${fmtTime(e.time)}${e.end?' to '+fmtTime(e.end):''}</div><div class="muted">${esc(e.cat||'')}${e.loc?' at '+esc(e.loc):''}</div>
-      ${sect('s','Staff')}${sect('a','Accounts')}${sect('c','Contacts')}
-      ${e.notes?`<div style="margin-top:14px;white-space:pre-wrap">${esc(e.notes)}</div>`:''}
-      <div class="muted" style="font-size:12px;margin-top:14px">Shows on the timeline of every account, contact and staff member above.</div></div>
-      <div class="foot"><button class="btn" id="m_del">Delete</button><button class="btn" id="m_fu">Schedule follow-up</button></div></div></div>`;
-    $('#m_x').onclick=closeModal;$('#m_edit').onclick=()=>openEditor(e.id);
-    $('#m_del').onclick=()=>{if(confirm('Delete "'+e.title+'"?')){const b=JSON.parse(JSON.stringify(e));b.deleted=true;closeModal();saveEvent(b);toast('Appointment deleted');}};
-    $('#m_fu').onclick=()=>{openEditor(null,{title:'Follow-up: '+e.title,date:iso(addDays(parseD(e.date),7)),cat:'Follow-up',att:JSON.parse(JSON.stringify(e.att)),notes:''});};
-  } else {
-    const e=M.ev;const g=group(e.att);
-    const chip=(t,i)=>`<span class="chip ${t}"><b>${{s:'Staff',a:'Account',c:'Contact'}[t]}</b>${esc(name(t,i))}<button class="x" data-rm="${t}:${i}" aria-label="Remove ${esc(name(t,i))}">×</button></span>`;
-    const counts=`${e.att.length} invited: ${g.s.length} staff, ${g.a.length} account${g.a.length===1?'':'s'}, ${g.c.length} contact${g.c.length===1?'':'s'}`;
-    m.innerHTML=`<div class="scrim" data-scrim><div class="sheet" role="dialog" aria-modal="true" aria-label="${M.isNew?'New appointment':'Edit appointment'}"><header><h2>${M.isNew?'New appointment':'Edit appointment'}</h2><button class="btn icon" id="m_x" aria-label="Close">✕</button></header>
-      ${!navigator.onLine?'<div style="padding:9px 16px;background:var(--warnBg);color:var(--warnFg)">No connection. This saves on this device and syncs when you are back online.</div>':''}
-      <div class="form">
-        <label class="l" for="f_title">Title</label><input type="text" id="f_title" value="${esc(e.title)}" placeholder="e.g. Lunch with Kinder Morgan engineering">
-        <label class="l" for="f_date">When</label><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><input type="date" id="f_date" value="${e.date}"><input type="time" id="f_time" value="${e.time||''}" aria-label="Start time" ${e.time?'':'disabled'}><span class="muted">to</span><input type="time" id="f_end" value="${e.end||''}" aria-label="End time" ${e.time?'':'disabled'}><label class="muted" style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="f_all" ${e.time?'':'checked'}>All-day</label></div>
-        <label class="l" for="f_cat">Category</label><select id="f_cat">${CATS.map(c=>`<option ${c===e.cat?'selected':''}>${c}</option>`).join('')}</select>
-        <label class="l" for="f_loc">Location</label><input type="text" id="f_loc" value="${esc(e.loc)}" placeholder="Restaurant, site or address">
-        <label class="l" for="f_inv" style="align-self:start;padding-top:7px">Invite</label>
-        <div><div class="chips" style="margin-bottom:${e.att.length?'8px':'0'}">${g.s.map(i=>chip('s',i)).join('')}${g.a.map(i=>chip('a',i)).join('')}${g.c.map(i=>chip('c',i)).join('')}</div>
-          <input type="text" id="f_inv" autocomplete="off" placeholder="Type 2+ letters: staff, accounts or contacts" value="${esc(M.q)}" style="width:100%" role="combobox" aria-expanded="${M.q.length>=2}" aria-controls="f_res">
-          <div id="f_res"></div><div class="muted" style="font-size:12px;margin-top:6px">${counts}</div></div>
-        <label class="l" for="f_notes" style="align-self:start;padding-top:7px">Notes</label><textarea id="f_notes" rows="5" placeholder="Call report: who you met, what they're working on, next step">${esc(e.notes)}</textarea>
-      </div>
-      <div class="foot"><button class="btn" id="m_cancel">Cancel</button><button class="btn primary" id="m_save">${navigator.onLine?'Save appointment':'Save to this device'}</button></div></div></div>`;
-    const sync=()=>{e.title=$('#f_title').value;e.date=$('#f_date').value;const all=$('#f_all').checked;e.time=all?'':($('#f_time').value||'09:00');e.end=all?'':$('#f_end').value;e.cat=$('#f_cat').value;e.loc=$('#f_loc').value;e.notes=$('#f_notes').value;};
-    $('#m_x').onclick=closeModal;$('#m_cancel').onclick=closeModal;
-    $('#f_all').onchange=()=>{sync();if(!$('#f_all').checked&&!e.time)e.time='09:00';renderModal();};
-    m.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{sync();const [t,i]=b.dataset.rm.split(':');e.att=e.att.filter(x=>!(x[0]===t&&x[1]===+i));renderModal();$('#f_inv').focus();});
-    const inv=$('#f_inv');
-    inv.oninput=()=>{M.q=inv.value;M.hl=0;drawResults();};
-    inv.onkeydown=ev=>{const items=[...document.querySelectorAll('#f_res button')];if(ev.key==='ArrowDown'){ev.preventDefault();M.hl=Math.min(items.length-1,M.hl+1);drawResults();}else if(ev.key==='ArrowUp'){ev.preventDefault();M.hl=Math.max(0,M.hl-1);drawResults();}else if(ev.key==='Enter'){ev.preventDefault();if(items[M.hl])items[M.hl].click();}else if(ev.key==='Escape'){M.q='';inv.value='';drawResults();}};
-    $('#m_save').onclick=()=>{sync();if(!e.title.trim()){$('#f_title').focus();toast('Add a title first');return;}if(!e.date){toast('Pick a date');return;}
-      const b=JSON.parse(JSON.stringify(e));delete b._l;closeModal();saveEvent(b);toast(navigator.onLine?'Appointment saved':'Saved on this device. Syncs when you reconnect.');};
-    drawResults();
-    function drawResults(){
-      const box=$('#f_res');const q=M.q.trim().toLowerCase();inv.setAttribute('aria-expanded',q.length>=2);
-      if(q.length<2){box.innerHTML='';return;}
-      const has=(t,i)=>e.att.some(x=>x[0]===t&&x[1]===i);
-      const hits=(t,arr,lab,sub,max)=>{const out=[];for(let i=0;i<arr.length&&out.length<max;i++){if(has(t,i))continue;const n=arr[i][0];if(n&&n.toLowerCase().includes(q))out.push([t,i,sub(i)]);}return out.length?{lab,out}:null;};
-      const groups=[hits('s',STF,'Staff',i=>STF[i][1],5),hits('a',ACC,'Accounts',i=>ACC[i][2]>=0?'Parent: '+ACC[ACC[i][2]][0]:(ACC[i][4]?'YTD '+money(ACC[i][4]):'Account'),6),hits('c',CON,'Contacts',i=>CON[i][1]>=0?ACC[CON[i][1]][0]:'',6)].filter(Boolean);
-      if(!groups.length){box.innerHTML=`<div class="res"><div style="padding:10px 12px" class="muted">No staff, account or contact matches "${esc(M.q)}".</div></div>`;return;}
-      let k=0;box.innerHTML=`<div class="res" role="listbox">${groups.map(gp=>`<div class="g">${gp.lab}</div>${gp.out.map(([t,i,s])=>`<button type="button" role="option" class="${k++===M.hl?'hl':''}" data-add="${t}:${i}"><span>${esc(name(t,i))}</span><span class="muted" style="font-size:12px">${esc(s)}</span></button>`).join('')}`).join('')}</div>`;
-      box.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{sync();const [t,i]=b.dataset.add.split(':');e.att.push([t,+i]);M.q='';renderModal();$('#f_inv').focus();});
+def num(v):
+    try:    return float(v or 0)
+    except: return 0.0
+
+def day(v):
+    v = s(v)[:10]
+    return v if re.match(r"^\d{4}-\d{2}-\d{2}$", v) else None
+
+def key(v):
+    v = s(v).upper()
+    return v if UUID_RE.match(v) else ""
+
+def type_codes(v):
+    out = {TYPE_CODES.get(t.strip().lower(), "") for t in re.split(r"[\r\n]+", s(v)) if t.strip()}
+    return "".join(sorted(c for c in out if c))
+
+def fm_ts(dt: datetime) -> str:
+    """Format datetime as FileMaker find string MM/DD/YYYY HH:MM:SS"""
+    return dt.strftime("%m/%d/%Y %H:%M:%S")
+
+def parse_fm_ts(v: str):
+    """Parse FileMaker MM/DD/YYYY HH:MM:SS -> datetime or None"""
+    v = s(v)
+    for fmt in ("%m/%d/%Y %H:%M:%S", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(v, fmt)
+        except ValueError:
+            continue
+    return None
+
+# ---------- Data API ----------
+def _cfg():
+    host = os.environ.get("FM_HOST", "fms26.alamark.com").strip().rstrip("/")
+    if not host.startswith("http"):
+        host = "https://" + host
+    db   = os.environ.get("FM_DB", "ez-line")
+    user = os.environ.get("FM_USER")
+    pw   = os.environ.get("FM_PASSWORD")
+    if not user or not pw:
+        sys.exit("FM_USER / FM_PASSWORD not set in .env")
+    return host, db, user, pw
+
+def _login(host, db, user, pw):
+    import base64
+    url = f"{host}/fmi/data/v1/databases/{urllib.parse.quote(db)}/sessions"
+    b64 = base64.b64encode(f"{user}:{pw}".encode()).decode()
+    req = urllib.request.Request(url, method="POST", data=b"{}",
+          headers={"Authorization": f"Basic {b64}", "Content-Type": "application/json"})
+    ctx = ssl.create_default_context()
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=30, context=ctx) as r:
+                return json.loads(r.read())["response"]["token"]
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", "replace")[:400]
+            if attempt == 2:
+                sys.exit(f"FM login failed ({e.code}): {body}")
+        time.sleep(2 * (attempt + 1))
+
+def _logout(host, db, token):
+    url = f"{host}/fmi/data/v1/databases/{urllib.parse.quote(db)}/sessions/{token}"
+    req = urllib.request.Request(url, method="DELETE",
+          headers={"Authorization": f"Bearer {token}"})
+    try:
+        urllib.request.urlopen(req, timeout=10, context=ssl.create_default_context())
+    except Exception:
+        pass
+
+def _get_all(host, db, token, layout, offset, limit):
+    """GET all records from layout, paged."""
+    url = (f"{host}/fmi/data/v1/databases/{urllib.parse.quote(db)}"
+           f"/layouts/{urllib.parse.quote(layout)}/records"
+           f"?_offset={offset}&_limit={limit}")
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+    ctx = ssl.create_default_context()
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=120, context=ctx) as r:
+                return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", "replace")[:400]
+            if attempt == 2:
+                raise SystemExit(f"FM Data API error {e.code} for {layout}: {body}")
+        time.sleep(2 * (attempt + 1))
+    return {}
+
+def _find(host, db, token, layout, ts_field, since: datetime):
+    """POST _find to get records modified >= since. Returns list of fieldData dicts."""
+    url = (f"{host}/fmi/data/v1/databases/{urllib.parse.quote(db)}"
+           f"/layouts/{urllib.parse.quote(layout)}/_find")
+    query = json.dumps({
+        "query": [{ts_field: f">={fm_ts(since)}"}],
+        "limit": PAGE,
+        "offset": 1,
+    }).encode()
+    ctx = ssl.create_default_context()
+    rows = []
+    offset = 1
+    while True:
+        body = json.dumps({
+            "query": [{ts_field: f">={fm_ts(since)}"}],
+            "limit": PAGE,
+            "offset": offset,
+        }).encode()
+        req = urllib.request.Request(url, method="POST", data=body,
+              headers={"Authorization": f"Bearer {token}",
+                       "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=120, context=ctx) as r:
+                data = json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            err = e.read().decode("utf-8", "replace")
+            # 401 from _find means no records found (FM returns this for empty finds)
+            if e.code == 401 or '"code":"401"' in err:
+                break
+            raise SystemExit(f"FM find error {e.code} for {layout}: {err[:400]}")
+        records = data.get("response", {}).get("data", [])
+        for rec in records:
+            rows.append(rec.get("fieldData", {}))
+        if len(records) < PAGE:
+            break
+        offset += PAGE
+    return rows
+
+def fetch_full(kind, token, host, db):
+    """Fetch all records for a layout."""
+    layout = LAYOUTS[kind]
+    rows, offset = [], 1
+    while True:
+        data = _get_all(host, db, token, layout, offset, PAGE)
+        records = data.get("response", {}).get("data", [])
+        for rec in records:
+            rows.append(rec.get("fieldData", {}))
+        if len(records) < PAGE:
+            break
+        offset += PAGE
+    return rows
+
+def fetch_delta(kind, token, host, db, since: datetime):
+    """Fetch only records modified since watermark."""
+    ts_field = TS_FIELD[kind]
+    if ts_field is None:
+        return fetch_full(kind, token, host, db)
+    return _find(host, db, token, LAYOUTS[kind], ts_field, since - OVERLAP)
+
+# ---------- watermarks ----------
+def ensure_watermarks(c):
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS sync_watermarks (
+            kind        TEXT PRIMARY KEY,
+            last_sync   TIMESTAMPTZ NOT NULL
+        )
+    """)
+    c.commit()
+
+def get_watermark(c, kind):
+    row = c.execute("SELECT last_sync FROM sync_watermarks WHERE kind=%s", (kind,)).fetchone()
+    return row[0] if row else None
+
+def set_watermark(c, kind, ts):
+    c.execute("""
+        INSERT INTO sync_watermarks (kind, last_sync) VALUES (%s, %s)
+        ON CONFLICT (kind) DO UPDATE SET last_sync = EXCLUDED.last_sync
+    """, (kind, ts))
+
+# ---------- build ----------
+def build(raw, accounts_existing=None):
+    """
+    raw: dict of kind -> list of fieldData dicts (may be delta, not full set)
+    accounts_existing: set of UUIDs already in Postgres (for delta contact/link resolution)
+    """
+    accounts = {}
+    for r in raw["accounts"]:
+        k = key(r.get("z_Kp_CRMaccounts_txt"))
+        if not k or not s(r.get("Account_Name_stored")):
+            continue
+        accounts[k] = (
+            k, s(r["Account_Name_stored"]), type_codes(r.get("Account_Type")),
+            key(r.get("z_Kf_ParentAccount")) or None,
+            key(r.get("z_Kf_RootParentAccount")) or None,
+            num(r.get("Sales_YTD")), num(r.get("Sales_PreviousYr")),
+            num(r.get("Quotes_YTD")), day(r.get("Last_Order")),
+            s(r.get("Addr_Address")), s(r.get("Addr_City")),
+            s(r.get("Addr_State")), s(r.get("Addr_Zip")),
+            s(r.get("Homepage")), s(r.get("Category")),
+        )
+
+    # numeric FK -> UUID lookup (for offices)
+    numeric_to_uuid = {}
+    for r in raw["accounts"]:
+        uuid = key(r.get("z_Kp_CRMaccounts_txt"))
+        if not uuid:
+            continue
+        for fk in ("z_Kf_Customer", "z_Kf_Enduser", "z_Kf_Engineering"):
+            v = s(r.get(fk))
+            if v and v.isdigit():
+                numeric_to_uuid[v] = uuid
+
+    # all known account UUIDs (local fetch + already in Postgres)
+    all_account_ids = set(accounts.keys())
+    if accounts_existing:
+        all_account_ids |= accounts_existing
+
+    # links (always full replace)
+    links = {}
+    best  = {}
+    for r in raw["links"]:
+        c = s(r.get("_Kf_Buyer")).split(".")[0]
+        a = key(r.get("_Kf_CRMaccount"))
+        if not c or not c.isdigit() or a not in all_account_ids:
+            continue
+        if (c, a) not in links:
+            links[(c, a)] = (c, a, 0.0, 0.0, 0.0)
+        if c not in best:
+            best[c] = (a, 0)
+
+    # contacts
+    contacts = {}
+    for r in raw["contacts"]:
+        c = s(r.get("__Kp_Buyer")).split(".")[0]
+        name = (s(r.get("Name_First")) + " " + s(r.get("Name_Last"))).strip()
+        if not c or not c.isdigit() or not name:
+            continue
+        cur = key(r.get("_Kf_CRMaccount_Current"))
+        if cur not in all_account_ids:
+            cur = best.get(c, (None, 0))[0]
+        contacts[c] = (
+            c, name, cur,
+            s(r.get("ContactTitle")), s(r.get("Email")),
+            s(r.get("Direct")), s(r.get("Mobile")),
+            s(r.get("Address_Street")), s(r.get("Address_City")),
+            s(r.get("Address_State")), s(r.get("Address_Zip")),
+            s(r.get("LinkedIn")), False, True, None, None,
+        )
+    links = {k: v for k, v in links.items() if k[0] in contacts}
+
+    # offices
+    offices = {}
+    unplaced = 0
+    for r in raw["offices"]:
+        oid = s(r.get("__Kp_CRMaccountOffice"))
+        if not oid:
+            continue
+        raw_fk = s(r.get("_Kf_CRMaccount"))
+        a = key(raw_fk) or numeric_to_uuid.get(raw_fk, "")
+        if not a or a not in all_account_ids:
+            unplaced += 1
+            continue
+        offices[oid] = (
+            oid, a, s(r.get("OfficeType")),
+            s(r.get("Addr_Address")), s(r.get("Addr_City")),
+            s(r.get("Addr_State")), s(r.get("Addr_Zip")),
+            s(r.get("Verified_Status")),
+        )
+
+    return {"accounts": accounts, "contacts": contacts,
+            "links": links, "offices": offices, "unplaced_offices": unplaced}
+
+# ---------- apply ----------
+def apply_to_postgres(c, data, is_full_links):
+    cur = c.cursor()
+    # accounts — upsert
+    cur.executemany(
+        """INSERT INTO accounts
+             (id,name,types,parent_id,root_id,sales_ytd,sales_py,quotes_ytd,
+              last_order,address,city,state,zip,homepage,category,updated_at)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
+           ON CONFLICT (id) DO UPDATE SET
+             name=EXCLUDED.name,types=EXCLUDED.types,
+             parent_id=EXCLUDED.parent_id,root_id=EXCLUDED.root_id,
+             sales_ytd=EXCLUDED.sales_ytd,sales_py=EXCLUDED.sales_py,
+             quotes_ytd=EXCLUDED.quotes_ytd,last_order=EXCLUDED.last_order,
+             address=EXCLUDED.address,city=EXCLUDED.city,
+             state=EXCLUDED.state,zip=EXCLUDED.zip,
+             homepage=EXCLUDED.homepage,category=EXCLUDED.category,
+             updated_at=now()""",
+        list(data["accounts"].values()))
+
+    # contacts — upsert
+    cur.executemany(
+        """INSERT INTO contacts
+             (id,name,account_id,title,email,phone_direct,phone_mobile,
+              address,city,state,zip,linkedin,work_remote,active,
+              last_quote,last_job,updated_at)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
+           ON CONFLICT (id) DO UPDATE SET
+             name=EXCLUDED.name,account_id=EXCLUDED.account_id,
+             title=EXCLUDED.title,email=EXCLUDED.email,
+             phone_direct=EXCLUDED.phone_direct,phone_mobile=EXCLUDED.phone_mobile,
+             address=EXCLUDED.address,city=EXCLUDED.city,
+             state=EXCLUDED.state,zip=EXCLUDED.zip,
+             linkedin=EXCLUDED.linkedin,work_remote=EXCLUDED.work_remote,
+             active=EXCLUDED.active,last_quote=EXCLUDED.last_quote,
+             last_job=EXCLUDED.last_job,updated_at=now()""",
+        list(data["contacts"].values()))
+
+    # links — always full replace (no reliable timestamp)
+    if is_full_links:
+        cur.execute("DELETE FROM contact_accounts")
+    cur.executemany(
+        "INSERT INTO contact_accounts (contact_id,account_id,sales_ytd,sales_py,quotes_ytd)"
+        " VALUES (%s,%s,%s,%s,%s)"
+        " ON CONFLICT DO NOTHING",
+        list(data["links"].values()))
+
+    # offices — upsert FM-sourced only
+    cur.executemany(
+        """INSERT INTO account_offices
+             (id,account_id,office_type,address,city,state,zip,notes,
+              source,updated_by,updated_at)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'fm','filemaker',now())
+           ON CONFLICT (id) DO UPDATE SET
+             account_id=EXCLUDED.account_id,office_type=EXCLUDED.office_type,
+             address=EXCLUDED.address,city=EXCLUDED.city,
+             state=EXCLUDED.state,zip=EXCLUDED.zip,updated_at=now()
+           WHERE account_offices.source='fm'""",
+        [(o[0],o[1],o[2],o[3],o[4],o[5],o[6],
+          ("Verified: "+o[7]) if o[7] else "")
+         for o in data["offices"].values()])
+
+# ---------- commands ----------
+def probe():
+    host, db, user, pw = _cfg()
+    token = _login(host, db, user, pw)
+    try:
+        for kind in LAYOUTS:
+            rows = fetch_full(kind, token, host, db)[:3]
+            print(f"\n== {LAYOUTS[kind]} ({kind}) -- sample rows")
+            for r in rows:
+                show = {k: v for k, v in r.items() if k.startswith("_") or k.startswith("z_")}
+                show["_name"] = (r.get("Account_Name_stored") or
+                    f"{r.get('Name_First','')} {r.get('Name_Last','')}".strip() or
+                    r.get("OfficeType",""))
+                print("   ", json.dumps(show, default=str))
+    finally:
+        _logout(host, db, token)
+
+def sync(force_full=False):
+    t0 = time.time()
+    now = datetime.utcnow()
+    host, db, user, pw = _cfg()
+
+    with psycopg.connect(os.environ["DATABASE_URL"]) as c:
+        ensure_watermarks(c)
+
+        # get watermarks
+        wm = {kind: get_watermark(c, kind) for kind in LAYOUTS}
+        is_first_run = all(v is None for v in wm.values())
+        do_full = force_full or is_first_run
+        mode = "full" if do_full else "incremental"
+
+        # get existing account UUIDs for delta contact/link resolution
+        accounts_existing = set()
+        if not do_full:
+            rows = c.execute("SELECT id FROM accounts").fetchall()
+            accounts_existing = {r[0] for r in rows}
+
+        run_id = c.execute(
+            "INSERT INTO sync_runs (mode) VALUES (%s) RETURNING id", (mode,)
+        ).fetchone()[0]
+        c.commit()
+
+        before = {t: c.execute(f"SELECT count(*) FROM {t}").fetchone()[0]
+                  for t in ("accounts","contacts","contact_accounts")}
+        before["fm_offices"] = c.execute(
+            "SELECT count(*) FROM account_offices WHERE source='fm'"
+        ).fetchone()[0]
+
+    # fetch from FileMaker
+    token = _login(host, db, user, pw)
+    try:
+        raw = {}
+        fetched = {}
+        for kind in LAYOUTS:
+            if do_full or wm[kind] is None:
+                raw[kind] = fetch_full(kind, token, host, db)
+            else:
+                raw[kind] = fetch_delta(kind, token, host, db, wm[kind])
+            fetched[kind] = len(raw[kind])
+            print(f"  {kind}: {fetched[kind]} {'(full)' if do_full or wm[kind] is None else '(delta)'}")
+    finally:
+        _logout(host, db, token)
+
+    data = build(raw, accounts_existing if not do_full else None)
+
+    summary = {
+        "mode": mode,
+        "fetched": fetched,
+        "usable": {k: len(data[k]) for k in ("accounts","contacts","links","offices")},
+        "unplaced_offices": data["unplaced_offices"],
+        "postgres_before": before,
     }
-  }
-  const sc=m.querySelector('[data-scrim]');sc.onclick=ev=>{if(ev.target===sc)closeModal();};
-}
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.modal&&S.modal.mode==='view')closeModal();});
-function confirmOut(){toast(outbox.length+' appointment(s) still waiting to sync. Reconnect first, then sign out.');return false;}
-let tt;function toast(msg){let t=$('.toast');if(!t){t=document.createElement('div');t.className='toast';t.setAttribute('role','status');document.body.appendChild(t);}t.textContent=msg;clearTimeout(tt);tt=setTimeout(()=>t.remove(),2600);}
 
-render();
-};
-</script>
-</body>
-</html>
+    with psycopg.connect(os.environ["DATABASE_URL"]) as c:
+        with c.transaction():
+            apply_to_postgres(c, data, is_full_links=do_full)
+            # update watermarks to now
+            for kind in LAYOUTS:
+                set_watermark(c, kind, now)
+
+        after = {t: c.execute(f"SELECT count(*) FROM {t}").fetchone()[0]
+                 for t in ("accounts","contacts","contact_accounts")}
+        summary["postgres_after"] = after
+        summary["seconds"] = round(time.time()-t0, 1)
+        c.execute("UPDATE sync_runs SET finished_at=now(),ok=true,summary=%s WHERE id=%s",
+                  (json.dumps(summary), run_id))
+        c.commit()
+
+    print(f"\n{mode.upper()} SYNC COMPLETE\n" + json.dumps(summary, indent=2))
+
+if __name__ == "__main__":
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "run"
+    if cmd == "probe":
+        probe()
+    elif cmd == "full":
+        sync(force_full=True)
+    elif cmd == "run":
+        sync(force_full=False)
+    else:
+        print(__doc__)
+        sys.exit(1)
