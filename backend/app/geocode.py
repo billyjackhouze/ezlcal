@@ -9,14 +9,16 @@ import json, os, sys, time, urllib.parse, urllib.request
 from pathlib import Path
 
 import psycopg
+from psycopg.rows import dict_row
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 UA = "ezlcal/1.0 (ezlcal.alamark.com)"
+DB = os.environ["DATABASE_URL"]
 
 
-def geocode_one(address: str, city: str, state: str, zip_: str) -> tuple[float, float] | None:
+def geocode_one(address, city, state, zip_):
     parts = [p for p in [address, city, state, zip_, "USA"] if p and p.strip()]
     q = ", ".join(parts)
     url = "https://nominatim.openstreetmap.org/search?" + urllib.parse.urlencode({
@@ -34,25 +36,16 @@ def geocode_one(address: str, city: str, state: str, zip_: str) -> tuple[float, 
 
 
 def run(reset=False):
-    with psycopg.connect(os.environ["DATABASE_URL"]) as c:
-        # ensure columns exist
-        c.execute("""
-            ALTER TABLE account_offices
-              ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION,
-              ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION,
-              ADD COLUMN IF NOT EXISTS geocoded_at TIMESTAMPTZ
-        """)
-        c.execute("""
-            CREATE INDEX IF NOT EXISTS account_offices_latlng
-              ON account_offices (lat, lng) WHERE lat IS NOT NULL
-        """)
+    with psycopg.connect(DB, row_factory=dict_row) as c:
+        c.execute("ALTER TABLE account_offices ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION")
+        c.execute("ALTER TABLE account_offices ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION")
+        c.execute("ALTER TABLE account_offices ADD COLUMN IF NOT EXISTS geocoded_at TIMESTAMPTZ")
+        c.execute("CREATE INDEX IF NOT EXISTS account_offices_latlng ON account_offices (lat, lng) WHERE lat IS NOT NULL")
         c.commit()
-
         if reset:
             c.execute("UPDATE account_offices SET lat=NULL, lng=NULL, geocoded_at=NULL")
             c.commit()
             print("Reset all geocodes.")
-
         rows = c.execute("""
             SELECT id, address, city, state, zip
             FROM account_offices
@@ -66,18 +59,16 @@ def run(reset=False):
     ok = fail = skip = 0
 
     for row in rows:
-        oid, addr, city, state, zip_ = row["id"], row["address"], row["city"], row["state"], row["zip"]
+        oid = row["id"]
+        addr, city, state, zip_ = row["address"], row["city"], row["state"], row["zip"]
         if not (addr or city):
             skip += 1
             continue
         result = geocode_one(addr, city, state, zip_)
-        with psycopg.connect(os.environ["DATABASE_URL"]) as c:
+        with psycopg.connect(DB, row_factory=dict_row) as c:
             if result:
                 lat, lng = result
-                c.execute(
-                    "UPDATE account_offices SET lat=%s, lng=%s, geocoded_at=now() WHERE id=%s",
-                    (lat, lng, oid)
-                )
+                c.execute("UPDATE account_offices SET lat=%s, lng=%s, geocoded_at=now() WHERE id=%s", (lat, lng, oid))
                 print(f"  OK  {city}, {state} -> {lat:.4f}, {lng:.4f}  [{addr[:40]}]")
                 ok += 1
             else:
@@ -85,9 +76,9 @@ def run(reset=False):
                 print(f"  --  no result for: {addr}, {city}, {state}")
                 fail += 1
             c.commit()
-        time.sleep(1.1)  # Nominatim rate limit
+        time.sleep(1.1)
 
-    print(f"\nDone: {ok} geocoded, {fail} failed, {skip} skipped (no address).")
+    print(f"\nDone: {ok} geocoded, {fail} failed, {skip} skipped.")
 
 
 if __name__ == "__main__":
