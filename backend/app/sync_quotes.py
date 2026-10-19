@@ -201,8 +201,8 @@ def run(full=False):
     print(f"Upserting {len(upsert_rows)} rows ({skip} skipped)...")
 
     with psycopg.connect(DB, row_factory=dict_row) as c:
-        with c.transaction():
-            c.executemany("""
+        with c.transaction(), c.cursor() as cur:
+            cur.executemany("""
                 INSERT INTO account_quotes
                     (id, account_id, fm_customer_id, job_number, record_type,
                      quote_date, job_date, sales_person, buyer_name,
