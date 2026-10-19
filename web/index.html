@@ -423,7 +423,7 @@ function render(){
   else renderEntity(main,S.view);
   renderStatus();
   if(S.modal) renderModal();
-  if(S.view==='a'&&S.sel.a>=0)setTimeout(()=>loadQuotesJobs(S.sel.a),0);
+
 }
 document.addEventListener('click',e=>{
   const t=e.target.closest('[data-office],[data-signout],[data-tab],[data-new],[data-themebtn],[data-open],[data-goto],[data-cal],[data-calmode],[data-slot],[data-team],[data-fam],[data-back]');
@@ -539,6 +539,7 @@ function renderEntity(main,k){
   main.className='split'+(sel>=0?' has':'');
   main.innerHTML=`<section class="listpane" aria-label="List"><div class="listhead"><input class="search" id="q" type="search" placeholder="${ph}" value="${esc(S.q[k])}" aria-label="${ph}">${k==='a'?'<button class="btn" id="qadd" style="flex:0 0 auto">+ Company</button>':k==='c'?'<button class="btn" id="qadd" style="flex:0 0 auto">+ Contact</button>':''}</div><div class="list">${rows||'<div class="empty">No matches</div>'}</div></section>
     ${sel>=0?detailHtml(k,sel):'<section class="detail"><div class="empty">Pick a record on the left.</div></section>'}`;
+  if(k==='a'&&sel>=0)setTimeout(()=>loadQuotesJobs(sel),0);
   const qi=$('#q');const qadd=$('#qadd');if(qadd)qadd.onclick=()=>{if(k==='a')openNewAccount();else openNewContact(-1);};qi.oninput=e=>{S.q[k]=e.target.value;const pos=e.target.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(pos,pos);};
 }
 function detailHtml(k,i){
