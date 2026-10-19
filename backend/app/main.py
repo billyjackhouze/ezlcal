@@ -353,21 +353,17 @@ def get_quotes(account_id: str, u: dict = Depends(current_user)):
                    buyer_name, customer_name, project, total_amount,
                    record_type, fm_customer_id
             FROM account_quotes
-            WHERE account_id = %s
-              AND (quote_date >= now() - interval '3 years'
-                   OR job_date >= now() - interval '3 years')
-              AND record_type = 'quote'
-            ORDER BY quote_date DESC NULLS LAST, job_date DESC NULLS LAST
+            WHERE account_id = %s AND record_type = 'quote'
+            ORDER BY coalesce(quote_date, job_date) DESC NULLS LAST
             LIMIT 200
         """, (account_id,)).fetchall()
-        # year totals
         totals = c.execute("""
-            SELECT extract(year from coalesce(job_date, quote_date))::int AS yr,
+            SELECT extract(year from coalesce(quote_date, job_date))::int AS yr,
                    sum(total_amount) AS total
             FROM account_quotes
             WHERE account_id = %s AND record_type = 'quote'
-              AND coalesce(job_date, quote_date) >= now() - interval '3 years'
-            GROUP BY yr ORDER BY yr DESC
+              AND coalesce(quote_date, job_date) IS NOT NULL
+            GROUP BY yr ORDER BY yr DESC LIMIT 4
         """, (account_id,)).fetchall()
     return {
         "rows": [dict(r) for r in rows],
@@ -384,11 +380,8 @@ def get_jobs(account_id: str, u: dict = Depends(current_user)):
                    buyer_name, customer_name, project, total_amount,
                    record_type, fm_customer_id
             FROM account_quotes
-            WHERE account_id = %s
-              AND (quote_date >= now() - interval '3 years'
-                   OR job_date >= now() - interval '3 years')
-              AND record_type = 'job'
-            ORDER BY job_date DESC NULLS LAST, quote_date DESC NULLS LAST
+            WHERE account_id = %s AND record_type = 'job'
+            ORDER BY coalesce(job_date, quote_date) DESC NULLS LAST
             LIMIT 200
         """, (account_id,)).fetchall()
         totals = c.execute("""
@@ -396,8 +389,8 @@ def get_jobs(account_id: str, u: dict = Depends(current_user)):
                    sum(total_amount) AS total
             FROM account_quotes
             WHERE account_id = %s AND record_type = 'job'
-              AND coalesce(job_date, quote_date) >= now() - interval '3 years'
-            GROUP BY yr ORDER BY yr DESC
+              AND coalesce(job_date, quote_date) IS NOT NULL
+            GROUP BY yr ORDER BY yr DESC LIMIT 4
         """, (account_id,)).fetchall()
     return {
         "rows": [dict(r) for r in rows],
