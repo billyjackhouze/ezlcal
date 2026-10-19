@@ -714,7 +714,7 @@ function renderMap(main){
   if(_mapInst){_mapInst.remove();_mapInst=null;}
   const map=L.map('leaflet-map',{zoomControl:true}).setView([29.8,-95.4],8);
   _mapInst=map;
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',subdomains:'abcd',maxZoom:20}).addTo(map);
+  L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_4osq_1_ac0c8786dcc35f6bda1c5fe9',{attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',maxZoom:20}).addTo(map);
   if(_mapData){drawPins(map);} else {
     EZ.api('/map').then(r=>r.json()).then(j=>{_mapData=j.offices;drawPins(map);}).catch(()=>toast('Could not load map data'));
   }
