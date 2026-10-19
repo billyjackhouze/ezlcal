@@ -367,9 +367,12 @@ function loadQuotesJobs(acctIdx){
     if(!box)return;
     const cache=t==='q'?EZ._qcache:EZ._jcache;
     if(cache[aid]){renderQJBox(box,cache[aid],t==='q');return;}
-    EZ.api('/'+(t==='q'?'accounts':'accounts')+'/'+encodeURIComponent(aid)+'/'+(t==='q'?'quotes':'jobs')).then(r=>r.json()).then(j=>{
+    EZ.api('/accounts/'+encodeURIComponent(aid)+'/'+(t==='q'?'quotes':'jobs')).then(r=>{
+      if(!r.ok)throw new Error(r.status);
+      return r.json();
+    }).then(j=>{
       cache[aid]=j;renderQJBox(box,j,t==='q');
-    }).catch(()=>{box.innerHTML='<div class="boxhead"><b>'+(t==='q'?'Quotes':'Jobs')+'</b></div><div class="muted" style="padding:10px 14px">Could not load</div>';});
+    }).catch(err=>{if(err&&err.code===401)return;box.innerHTML='<div class="boxhead"><b>'+(t==='q'?'Quotes':'Jobs')+'</b></div><div class="muted" style="padding:10px 14px">Could not load</div>';});
   });
 }
 function renderQJBox(box,data,isQuote){
