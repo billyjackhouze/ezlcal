@@ -384,7 +384,7 @@ function loadQuotesJobs(acctIdx){
   });
 }
 function filterQJTable(inp){
-  const tbl=inp.closest('.box').querySelector('.qjtable');
+  const tbl=inp.closest('.qjtab').querySelector('.qjtable');
   if(!tbl)return;
   const q=inp.value.toLowerCase();
   tbl.querySelectorAll('tr.qjrow').forEach(tr=>{
@@ -398,7 +398,6 @@ function toggleQJDetail(tr){
   const det=tr.nextElementSibling;
   if(!det||!det.classList.contains('qjdetail'))return;
   const open=det.style.display!=='none';
-  // close all others in same table
   tr.closest('tbody').querySelectorAll('tr.qjdetail').forEach(d=>d.style.display='none');
   if(!open)det.style.display='';
 }
@@ -409,11 +408,18 @@ function renderQJBox(box,data,isQuote){
   const totals=data.totals||{};
   const years=Object.keys(totals).sort((a,b)=>b-a).slice(0,4);
   const fmt=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
+  // Update year badges in the parent tab header
+  const qjbox=box.closest('.box');
+  if(qjbox){
+    const badge=qjbox.querySelector('.qj-badges');
+    if(badge){
+      badge.innerHTML=years.map(y=>`<span style="font-size:11px;color:var(--muted)">${y} <b style="color:var(--text)">$${(totals[y]/1000).toFixed(0)}k</b></span>`).join('<span style="color:var(--muted);margin:0 4px">·</span>');
+    }
+  }
   if(!rows.length){
-    box.innerHTML=`<div class="boxhead"><b>${label}</b></div><div class="empty muted" style="font-size:12px;padding:12px 16px">No ${label.toLowerCase()} in the last 3 years</div>`;
+    box.innerHTML=`<div class="empty muted" style="font-size:12px;padding:12px 16px">No ${label.toLowerCase()} in the last 3 years</div>`;
     return;
   }
-  const yrBadges=years.map(y=>`<span style="font-size:11px;color:var(--muted)">${y} <b style="color:var(--text)">$${(totals[y]/1000).toFixed(0)}k</b></span>`).join('<span style="color:var(--muted);margin:0 4px">·</span>');
   const bodyRows=rows.map(r=>{
     const d=((r[dateKey]||r.quote_date||r.job_date)||'').slice(0,10)||'—';
     const searchStr=[r.job_number,r.buyer_name,r.customer_name,r.project,r.po_number,r.sales_person,r.enduser_ref,r.invoice_number].join(' ').toLowerCase();
@@ -434,7 +440,7 @@ function renderQJBox(box,data,isQuote){
       <td>${r.project||'—'}</td><td class="num">${r.total_amount?fmt.format(r.total_amount):'—'}</td>
     </tr><tr class="qjdetail" style="display:none"><td colspan="7"><div class="qjdetail-body">${det}${breakdown}</div></td></tr>`;
   }).join('');
-  box.innerHTML=`<div class="boxhead" style="padding:8px 14px;gap:8px"><b>${label}</b><span class="muted" style="font-size:12px">${rows.length}</span><span class="spacer"></span>${yrBadges}</div><div style="padding:6px 14px 2px"><input class="srch" placeholder="Search ${label.toLowerCase()}…" style="width:100%;box-sizing:border-box" oninput="filterQJTable(this)"></div><div style="overflow-x:auto"><table class="ctab qjtable"><thead><tr><th>Date</th><th>Job #</th><th>Sales</th><th>Buyer</th><th>Customer</th><th>Project</th><th class="num">Total</th></tr></thead><tbody>${bodyRows}</tbody></table></div>`;
+  box.innerHTML=`<div style="padding:6px 14px 2px"><input class="srch" placeholder="Search ${label.toLowerCase()}…" style="width:100%;box-sizing:border-box" oninput="filterQJTable(this)"></div><div style="overflow-x:auto"><table class="ctab qjtable"><thead><tr><th>Date</th><th>Job #</th><th>Sales</th><th>Buyer</th><th>Customer</th><th>Project</th><th class="num">Total</th></tr></thead><tbody>${bodyRows}</tbody></table></div>`;
 }
 
 
@@ -620,7 +626,7 @@ function detailHtml(k,i){
         ${offs.length?offs.map(officeCard).join(''):'<div class="muted" style="font-size:12.5px;padding:8px 0">No offices yet. Add the HQ, accounting or sales office addresses here.</div>'}</div></div>
       ${people.length?`<div class="box"><div class="boxhead"><b>Contacts</b><span class="muted">${people.length}</span><span class="spacer"></span><button class="btn" style="height:26px;padding:0 9px;font-size:12px" onclick="openNewContact(${i})">+ Add contact</button></div><div style="overflow-x:auto"><table class="ctab"><thead><tr><th>Name</th><th>Mobile</th><th>Direct</th><th>Email</th><th class="num">Sales YTD</th><th class="num">Prior yr</th><th class="num">Quotes YTD</th></tr></thead><tbody>
         ${people.map(c=>{const C=CON[c],L=linkBy[i+':'+c];return `<tr class="${C[12]?'':'inactive'}"><td><button class="linkbtn" data-goto="c:${c}"><b>${esc(C[0])}</b></button>${C[2]?`<div class="muted" style="font-size:12px">${esc(C[2])}</div>`:''}</td><td>${tel(C[5])}</td><td>${tel(C[4])}</td><td>${C[3]?`<a href="mailto:${esc(C[3])}">${esc(C[3])}</a>`:''}</td><td class="num">${L&&L[2]?money(L[2]):''}</td><td class="num">${L&&L[3]?money(L[3]):''}</td><td class="num">${L&&L[4]?money(L[4]):''}</td></tr>`;}).join('')}</tbody></table></div></div>`:''}
-      <div class="box" id="qjbox_${i}"><div class="boxhead" style="gap:0;padding:0 14px 0 0"><div class="segtabs" id="qjtabs_${i}" style="display:flex;gap:0;border-bottom:none"><button class="segtab active" data-tab="q" onclick="switchQJTab(${i},'q')">Quotes</button><button class="segtab" data-tab="j" onclick="switchQJTab(${i},'j')">Jobs</button></div><span class="spacer"></span></div><div id="qbox_${i}" class="qjtab" style="display:block"><div class="empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div><div id="jbox_${i}" class="qjtab" style="display:none"><div class="empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div></div>
+      <div class="box" id="qjbox_${i}"><div class="boxhead" style="gap:0;padding:0 14px 0 0"><div class="segtabs" id="qjtabs_${i}" style="display:flex;gap:0;border-bottom:none"><button class="segtab active" data-tab="q" onclick="switchQJTab(${i},'q')">Quotes</button><button class="segtab" data-tab="j" onclick="switchQJTab(${i},'j')">Jobs</button></div><span class="spacer"></span><div class="qj-badges" style="display:flex;gap:8px;align-items:center"></div></div><div id="qbox_${i}" class="qjtab" style="display:block"><div class="empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div><div id="jbox_${i}" class="qjtab" style="display:none"><div class="empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div></div>
     ${fam.length>1?`<div class="box"><div class="boxhead"><b>Company family</b><span class="muted">parent, children and grandchildren</span><span class="spacer"></span><span class="muted" style="font-size:12px;width:86px;text-align:right">Sales YTD</span><span class="muted" style="font-size:12px;width:92px;text-align:right">Last order</span></div>
         <div style="max-height:320px;overflow:auto">${fam.map(([n,d])=>`<div class="frow" style="${n===i?'background:var(--btnOn)':''}"><span style="width:${d*16}px;flex:0 0 ${d*16}px"></span><span class="muted" style="width:14px">${d?'└':'◆'}</span><button class="linkbtn" data-goto="a:${n}" style="flex:1;min-width:0;${d?'':'font-weight:600'}">${esc(ACC[n][0])}</button><span class="num" style="width:86px">${money(ACC[n][4])}</span><span class="num muted" style="width:92px">${ACC[n][7]?fmtDate(ACC[n][7]):'—'}</span></div>`).join('')}</div></div>`:''}
     </section><aside class="activity pane"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">All activity</b>${fam.length>1?`<label class="muted" style="font-size:12px;display:flex;gap:6px;align-items:center"><input type="checkbox" data-fam ${S.fam?'checked':''}>Whole family</label>`:''}</div>${timeline(evs)}</aside>`;
