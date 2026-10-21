@@ -176,6 +176,10 @@ dl.kv dt{text-align:right;color:var(--sub)} dl.kv dd{margin:0}
 .segtab{background:none;border:none;border-bottom:2px solid transparent;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);transition:color .15s,border-color .15s}
 .segtab.active{color:var(--text);border-bottom:2px solid var(--accent)}
 .segtab:hover:not(.active){color:var(--text)}
+.qjdetail-body{display:flex;flex-wrap:wrap;gap:6px 16px;padding:8px 14px 10px;font-size:12px;background:var(--hover);border-bottom:1px solid var(--border)}
+.qjdetail-body span{white-space:nowrap}
+.qjbreakdown{width:100%;display:flex;gap:16px;margin-top:4px;padding-top:4px;border-top:1px solid var(--border);font-size:12px}
+.qjrow:hover td{background:var(--hover)}
 .legend{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom,0px));right:14px;z-index:10;background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:12px;box-shadow:0 4px 16px var(--shadow);min-width:180px}
 .legend b{display:block;margin-bottom:6px;font-size:13px}
 .legend .li{display:flex;align-items:center;gap:8px;margin:4px 0}
@@ -379,24 +383,60 @@ function loadQuotesJobs(acctIdx){
     }).catch(err=>{if(err&&err.code===401)return;box.innerHTML='<div class="boxhead"><b>'+(t==='q'?'Quotes':'Jobs')+'</b></div><div class="muted" style="padding:10px 14px">Could not load</div>';});
   });
 }
+function filterQJTable(inp){
+  const tbl=inp.closest('.box').querySelector('.qjtable');
+  if(!tbl)return;
+  const q=inp.value.toLowerCase();
+  tbl.querySelectorAll('tr.qjrow').forEach(tr=>{
+    const match=!q||tr.dataset.search.includes(q);
+    tr.style.display=match?'':'none';
+    const det=tr.nextElementSibling;
+    if(det&&det.classList.contains('qjdetail'))det.style.display='none';
+  });
+}
+function toggleQJDetail(tr){
+  const det=tr.nextElementSibling;
+  if(!det||!det.classList.contains('qjdetail'))return;
+  const open=det.style.display!=='none';
+  // close all others in same table
+  tr.closest('tbody').querySelectorAll('tr.qjdetail').forEach(d=>d.style.display='none');
+  if(!open)det.style.display='';
+}
 function renderQJBox(box,data,isQuote){
   const label=isQuote?'Quotes':'Jobs';
+  const dateKey=isQuote?'quote_date':'job_date';
   const rows=data.rows||[];
   const totals=data.totals||{};
-  const yrs=Object.keys(totals).sort((a,b)=>b-a).slice(0,4);
-  const money=n=>n?'$'+Math.round(n).toLocaleString('en-US'):'—';
-  const fmtD=s=>{if(!s)return'';try{const p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString('en-US',{month:'numeric',day:'numeric',year:'numeric'});}catch(e){return s;}};
-  const dateField=isQuote?'quote_date':'job_date';
-  let html='<div class="boxhead"><b>'+label+'</b><span class="muted">'+rows.length+'</span><span class="spacer"></span></div>';
-  if(!rows.length){html+='<div class="muted" style="padding:10px 14px">No '+label.toLowerCase()+' in the last 3 years</div>';}
-  else{
-    html+='<div style="overflow-x:auto"><table class="ctab"><thead><tr><th>Date</th><th>Job #</th><th>Sales</th><th>Buyer</th><th>Customer</th><th>Project</th><th class="num">Total</th></tr></thead><tbody>';
-    html+=rows.map(r=>'<tr><td>'+esc(fmtD(r[dateField]||r.quote_date||r.job_date))+'</td><td>'+esc(r.job_number)+'</td><td>'+esc(r.sales_person)+'</td><td>'+esc(r.buyer_name)+'</td><td>'+esc(r.customer_name)+'</td><td>'+esc(r.project)+'</td><td class="num">'+money(r.total_amount)+'</td></tr>').join('');
-    html+='</tbody></table></div>';
-    if(yrs.length){html+='<div style="padding:8px 14px;display:flex;gap:18px;flex-wrap:wrap">'+yrs.map(y=>'<span><span class="muted">'+y+'</span> <b style="color:var(--green)">'+money(totals[y])+'</b></span>').join('')+'</div>';}
+  const years=Object.keys(totals).sort((a,b)=>b-a).slice(0,4);
+  const fmt=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
+  if(!rows.length){
+    box.innerHTML=`<div class="boxhead"><b>${label}</b></div><div class="empty muted" style="font-size:12px;padding:12px 16px">No ${label.toLowerCase()} in the last 3 years</div>`;
+    return;
   }
-  box.innerHTML=html;
+  const yrBadges=years.map(y=>`<span style="font-size:11px;color:var(--muted)">${y} <b style="color:var(--text)">$${(totals[y]/1000).toFixed(0)}k</b></span>`).join('<span style="color:var(--muted);margin:0 4px">·</span>');
+  const bodyRows=rows.map(r=>{
+    const d=((r[dateKey]||r.quote_date||r.job_date)||'').slice(0,10)||'—';
+    const searchStr=[r.job_number,r.buyer_name,r.customer_name,r.project,r.po_number,r.sales_person,r.enduser_ref,r.invoice_number].join(' ').toLowerCase();
+    const det=[
+      r.po_number?`<span><b>PO:</b> ${r.po_number}</span>`:'',
+      r.invoice_number?`<span><b>Invoice #:</b> ${r.invoice_number}</span>`:'',
+      r.invoice_date?`<span><b>Inv Date:</b> ${(r.invoice_date||'').slice(0,10)}</span>`:'',
+      r.date_shipped?`<span><b>Shipped:</b> ${(r.date_shipped||'').slice(0,10)}</span>`:'',
+      r.billing_terms?`<span><b>Terms:</b> ${r.billing_terms}</span>`:'',
+      r.job_status?`<span><b>Status:</b> ${r.job_status}</span>`:'',
+      r.enduser_ref?`<span><b>End User Ref:</b> ${r.enduser_ref}</span>`:'',
+    ].filter(Boolean).join('');
+    const breakdown=(r.clamps_total||r.pipejacks_total||r.specialty_total)?
+      `<div class="qjbreakdown">${r.clamps_total?`<span>Clamps: ${fmt.format(r.clamps_total)}</span>`:''}${r.pipejacks_total?`<span>Pipe Jacks: ${fmt.format(r.pipejacks_total)}</span>`:''}${r.specialty_total?`<span>Specialty: ${fmt.format(r.specialty_total)}</span>`:''}</div>`:'';
+    return `<tr class="qjrow" onclick="toggleQJDetail(this)" style="cursor:pointer" data-search="${searchStr}">
+      <td>${d}</td><td>${r.job_number||'—'}</td><td>${r.sales_person||'—'}</td>
+      <td>${r.buyer_name||'—'}</td><td>${r.customer_name||'—'}</td>
+      <td>${r.project||'—'}</td><td class="num">${r.total_amount?fmt.format(r.total_amount):'—'}</td>
+    </tr><tr class="qjdetail" style="display:none"><td colspan="7"><div class="qjdetail-body">${det}${breakdown}</div></td></tr>`;
+  }).join('');
+  box.innerHTML=`<div class="boxhead" style="padding:8px 14px;gap:8px"><b>${label}</b><span class="muted" style="font-size:12px">${rows.length}</span><span class="spacer"></span>${yrBadges}</div><div style="padding:6px 14px 2px"><input class="srch" placeholder="Search ${label.toLowerCase()}…" style="width:100%;box-sizing:border-box" oninput="filterQJTable(this)"></div><div style="overflow-x:auto"><table class="ctab qjtable"><thead><tr><th>Date</th><th>Job #</th><th>Sales</th><th>Buyer</th><th>Customer</th><th>Project</th><th class="num">Total</th></tr></thead><tbody>${bodyRows}</tbody></table></div>`;
 }
+
 
 /* ---------- render ---------- */
 function renderStatus(){

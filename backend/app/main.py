@@ -349,9 +349,11 @@ def get_quotes(account_id: str, u: dict = Depends(current_user)):
     """Return quotes for an account from the last 3 years."""
     with pool.connection() as c:
         rows = c.execute("""
-            SELECT job_number, quote_date, job_date, sales_person,
-                   buyer_name, customer_name, project, total_amount,
-                   record_type, fm_customer_id
+            SELECT job_number, quote_date, job_date, date_shipped,
+                   sales_person, buyer_name, customer_name, project,
+                   enduser_ref, po_number, invoice_number, invoice_date,
+                   billing_terms, job_status, clamps_total, pipejacks_total,
+                   specialty_total, total_amount, record_type, fm_customer_id
             FROM account_quotes
             WHERE account_id = %s AND record_type = 'quote'
             ORDER BY coalesce(quote_date, job_date) DESC NULLS LAST
@@ -376,9 +378,11 @@ def get_jobs(account_id: str, u: dict = Depends(current_user)):
     """Return jobs for an account from the last 3 years."""
     with pool.connection() as c:
         rows = c.execute("""
-            SELECT job_number, quote_date, job_date, sales_person,
-                   buyer_name, customer_name, project, total_amount,
-                   record_type, fm_customer_id
+            SELECT job_number, quote_date, job_date, date_shipped,
+                   sales_person, buyer_name, customer_name, project,
+                   enduser_ref, po_number, invoice_number, invoice_date,
+                   billing_terms, job_status, clamps_total, pipejacks_total,
+                   specialty_total, total_amount, record_type, fm_customer_id
             FROM account_quotes
             WHERE account_id = %s AND record_type = 'job'
             ORDER BY coalesce(job_date, quote_date) DESC NULLS LAST

@@ -98,14 +98,35 @@ def ensure_schema(c):
             record_type     TEXT,
             quote_date      DATE,
             job_date        DATE,
+            date_shipped    DATE,
             sales_person    TEXT,
             buyer_name      TEXT,
             customer_name   TEXT,
             project         TEXT,
+            enduser_ref     TEXT,
+            po_number       TEXT,
+            invoice_number  TEXT,
+            invoice_date    DATE,
+            billing_terms   TEXT,
+            job_status      TEXT,
+            clamps_total    NUMERIC(14,2),
+            pipejacks_total NUMERIC(14,2),
+            specialty_total NUMERIC(14,2),
             total_amount    NUMERIC(14,2),
             updated_at      TIMESTAMPTZ DEFAULT now()
         )
     """)
+    # Add new columns if upgrading from older schema
+    for col, defn in [
+        ("date_shipped", "DATE"), ("enduser_ref", "TEXT"), ("po_number", "TEXT"),
+        ("invoice_number", "TEXT"), ("invoice_date", "DATE"), ("billing_terms", "TEXT"),
+        ("job_status", "TEXT"), ("clamps_total", "NUMERIC(14,2)"),
+        ("pipejacks_total", "NUMERIC(14,2)"), ("specialty_total", "NUMERIC(14,2)"),
+    ]:
+        try:
+            c.execute(f"ALTER TABLE account_quotes ADD COLUMN IF NOT EXISTS {col} {defn}")
+        except Exception:
+            pass
     c.execute("CREATE INDEX IF NOT EXISTS aq_account_id ON account_quotes (account_id)")
     c.execute("CREATE INDEX IF NOT EXISTS aq_dates ON account_quotes (quote_date, job_date)")
     c.commit()
@@ -192,9 +213,15 @@ def run(full=False):
 
         upsert_rows.append((
             row_id, account_id, fm_cust_id, job_num, record_type,
-            quote_date, job_date,
+            quote_date, job_date, parse_date(r.get("DATE SHIPPED")),
             s(r.get("SALES PERSON")), s(r.get("Buyer Name")),
             s(r.get("CUSTOMER NAME")), s(r.get("REFERENCE_project")),
+            s(r.get("REFERENCE_enduser")), s(r.get("P.O. NUMBER")),
+            s(r.get("INVOICE NUMBER")), parse_date(r.get("INVOICE_DATE")),
+            s(r.get("BILLING TERMS")), s(r.get("JOB_Status")),
+            num(r.get("CLAMPS::Line Item Price Total", 0)),
+            num(r.get("PipeJacks::Line Item Price Total", 0)),
+            num(r.get("SpecialtyItems::LINE ITEM PRICE Total", 0)),
             num(r.get("TOTAL JOB AMOUNT calc", 0)),
         ))
 
@@ -205,14 +232,22 @@ def run(full=False):
             cur.executemany("""
                 INSERT INTO account_quotes
                     (id, account_id, fm_customer_id, job_number, record_type,
-                     quote_date, job_date, sales_person, buyer_name,
-                     customer_name, project, total_amount, updated_at)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
+                     quote_date, job_date, date_shipped, sales_person, buyer_name,
+                     customer_name, project, enduser_ref, po_number, invoice_number,
+                     invoice_date, billing_terms, job_status, clamps_total,
+                     pipejacks_total, specialty_total, total_amount, updated_at)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
                 ON CONFLICT (id) DO UPDATE SET
                     account_id=EXCLUDED.account_id,
                     quote_date=EXCLUDED.quote_date, job_date=EXCLUDED.job_date,
+                    date_shipped=EXCLUDED.date_shipped,
                     sales_person=EXCLUDED.sales_person, buyer_name=EXCLUDED.buyer_name,
                     customer_name=EXCLUDED.customer_name, project=EXCLUDED.project,
+                    enduser_ref=EXCLUDED.enduser_ref, po_number=EXCLUDED.po_number,
+                    invoice_number=EXCLUDED.invoice_number, invoice_date=EXCLUDED.invoice_date,
+                    billing_terms=EXCLUDED.billing_terms, job_status=EXCLUDED.job_status,
+                    clamps_total=EXCLUDED.clamps_total, pipejacks_total=EXCLUDED.pipejacks_total,
+                    specialty_total=EXCLUDED.specialty_total,
                     total_amount=EXCLUDED.total_amount, updated_at=now()
             """, upsert_rows)
         counts = c.execute("""
