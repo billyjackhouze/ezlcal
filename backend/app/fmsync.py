@@ -83,15 +83,24 @@ def parse_fm_ts(v: str):
     return None
 
 # ---------- Data API ----------
-def _cfg():
-    host = os.environ.get("FM_HOST", "fms26.alamark.com").strip().rstrip("/")
-    if not host.startswith("http"):
-        host = "https://" + host
-    db   = os.environ.get("FM_DB", "ez-line")
-    user = os.environ.get("FM_USER")
-    pw   = os.environ.get("FM_PASSWORD")
+def _cfg(live=False):
+    if live:
+        host = os.environ.get("FM_LIVE_HOST", "https://fms26.alamark.com").strip().rstrip("/")
+        if not host.startswith("http"):
+            host = "https://" + host
+        db   = os.environ.get("FM_LIVE_DB", "ez-line_Live")
+        user = os.environ.get("FM_LIVE_USER", os.environ.get("FM_USER", ""))
+        pw   = os.environ.get("FM_LIVE_PASSWORD", os.environ.get("FM_PASSWORD", ""))
+        print(f"SOURCE: LIVE ({host}/{db})")
+    else:
+        host = os.environ.get("FM_HOST", "fms26.alamark.com").strip().rstrip("/")
+        if not host.startswith("http"):
+            host = "https://" + host
+        db   = os.environ.get("FM_DB", "ez-line")
+        user = os.environ.get("FM_USER")
+        pw   = os.environ.get("FM_PASSWORD")
     if not user or not pw:
-        sys.exit("FM_USER / FM_PASSWORD not set in .env")
+        sys.exit("FM credentials not set in .env")
     return host, db, user, pw
 
 def _login(host, db, user, pw):
@@ -389,10 +398,10 @@ def probe():
     finally:
         _logout(host, db, token)
 
-def sync(force_full=False):
+def sync(force_full=False, live=False):
     t0 = time.time()
     now = datetime.utcnow()
-    host, db, user, pw = _cfg()
+    host, db, user, pw = _cfg(live=live)
 
     with psycopg.connect(os.environ["DATABASE_URL"]) as c:
         ensure_watermarks(c)
@@ -463,13 +472,18 @@ def sync(force_full=False):
     print(f"\n{mode.upper()} SYNC COMPLETE\n" + json.dumps(summary, indent=2))
 
 if __name__ == "__main__":
-    cmd = sys.argv[1] if len(sys.argv) > 1 else "run"
+    args = sys.argv[1:]
+    live = "--source=live" in args
+    args = [a for a in args if not a.startswith("--")]
+    cmd = args[0] if args else "run"
+    if live:
+        print("*** READ-ONLY PULL FROM LIVE — NO WRITES TO LIVE FILES ***")
     if cmd == "probe":
         probe()
     elif cmd == "full":
-        sync(force_full=True)
+        sync(force_full=True, live=live)
     elif cmd == "run":
-        sync(force_full=False)
+        sync(force_full=False, live=live)
     else:
         print(__doc__)
         sys.exit(1)
