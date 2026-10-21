@@ -382,8 +382,8 @@ def apply_to_postgres(c, data, is_full_links):
          for o in data["offices"].values()])
 
 # ---------- commands ----------
-def probe():
-    host, db, user, pw = _cfg()
+def probe(live=False):
+    host, db, user, pw = _cfg(live=live)
     token = _login(host, db, user, pw)
     try:
         for kind in LAYOUTS:
@@ -479,7 +479,7 @@ if __name__ == "__main__":
     if live:
         print("*** READ-ONLY PULL FROM LIVE — NO WRITES TO LIVE FILES ***")
     if cmd == "probe":
-        probe()
+        probe(live=live)
     elif cmd == "full":
         sync(force_full=True, live=live)
     elif cmd == "run":
