@@ -172,6 +172,10 @@ dl.kv dt{text-align:right;color:var(--sub)} dl.kv dd{margin:0}
 .map-popup b{font-size:14px;display:block;margin-bottom:4px}
 .map-popup .muted{color:#888;font-size:12px}
 .map-popup a{color:#2f6fde;text-decoration:none}
+.segtabs{display:flex}
+.segtab{background:none;border:none;border-bottom:2px solid transparent;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);transition:color .15s,border-color .15s}
+.segtab.active{color:var(--text);border-bottom:2px solid var(--accent)}
+.segtab:hover:not(.active){color:var(--text)}
 .legend{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom,0px));right:14px;z-index:10;background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:12px;box-shadow:0 4px 16px var(--shadow);min-width:180px}
 .legend b{display:block;margin-bottom:6px;font-size:13px}
 .legend .li{display:flex;align-items:center;gap:8px;margin:4px 0}
@@ -576,7 +580,7 @@ function detailHtml(k,i){
         ${offs.length?offs.map(officeCard).join(''):'<div class="muted" style="font-size:12.5px;padding:8px 0">No offices yet. Add the HQ, accounting or sales office addresses here.</div>'}</div></div>
       ${people.length?`<div class="box"><div class="boxhead"><b>Contacts</b><span class="muted">${people.length}</span><span class="spacer"></span><button class="btn" style="height:26px;padding:0 9px;font-size:12px" onclick="openNewContact(${i})">+ Add contact</button></div><div style="overflow-x:auto"><table class="ctab"><thead><tr><th>Name</th><th>Mobile</th><th>Direct</th><th>Email</th><th class="num">Sales YTD</th><th class="num">Prior yr</th><th class="num">Quotes YTD</th></tr></thead><tbody>
         ${people.map(c=>{const C=CON[c],L=linkBy[i+':'+c];return `<tr class="${C[12]?'':'inactive'}"><td><button class="linkbtn" data-goto="c:${c}"><b>${esc(C[0])}</b></button>${C[2]?`<div class="muted" style="font-size:12px">${esc(C[2])}</div>`:''}</td><td>${tel(C[5])}</td><td>${tel(C[4])}</td><td>${C[3]?`<a href="mailto:${esc(C[3])}">${esc(C[3])}</a>`:''}</td><td class="num">${L&&L[2]?money(L[2]):''}</td><td class="num">${L&&L[3]?money(L[3]):''}</td><td class="num">${L&&L[4]?money(L[4]):''}</td></tr>`;}).join('')}</tbody></table></div></div>`:''}
-      ${(()=>{const qbox='<div class="box" id="qbox_'+i+'"><div class="boxhead"><b>Quotes</b><span class="spacer"></span></div><div class="empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div>';const jbox='<div class="box" id="jbox_'+i+'"><div class="boxhead"><b>Jobs</b><span class="spacer"></span></div><div class="empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div>';return qbox+jbox;})()}
+      <div class="box" id="qjbox_${i}"><div class="boxhead" style="gap:0;padding:0 14px 0 0"><div class="segtabs" id="qjtabs_${i}" style="display:flex;gap:0;border-bottom:none"><button class="segtab active" data-tab="q" onclick="switchQJTab(${i},'q')">Quotes</button><button class="segtab" data-tab="j" onclick="switchQJTab(${i},'j')">Jobs</button></div><span class="spacer"></span></div><div id="qbox_${i}" class="qjtab" style="display:block"><div class="empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div><div id="jbox_${i}" class="qjtab" style="display:none"><div class="empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div></div>
     ${fam.length>1?`<div class="box"><div class="boxhead"><b>Company family</b><span class="muted">parent, children and grandchildren</span><span class="spacer"></span><span class="muted" style="font-size:12px;width:86px;text-align:right">Sales YTD</span><span class="muted" style="font-size:12px;width:92px;text-align:right">Last order</span></div>
         <div style="max-height:320px;overflow:auto">${fam.map(([n,d])=>`<div class="frow" style="${n===i?'background:var(--btnOn)':''}"><span style="width:${d*16}px;flex:0 0 ${d*16}px"></span><span class="muted" style="width:14px">${d?'└':'◆'}</span><button class="linkbtn" data-goto="a:${n}" style="flex:1;min-width:0;${d?'':'font-weight:600'}">${esc(ACC[n][0])}</button><span class="num" style="width:86px">${money(ACC[n][4])}</span><span class="num muted" style="width:92px">${ACC[n][7]?fmtDate(ACC[n][7]):'—'}</span></div>`).join('')}</div></div>`:''}
     </section><aside class="activity pane"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">All activity</b>${fam.length>1?`<label class="muted" style="font-size:12px;display:flex;gap:6px;align-items:center"><input type="checkbox" data-fam ${S.fam?'checked':''}>Whole family</label>`:''}</div>${timeline(evs)}</aside>`;
@@ -791,6 +795,17 @@ function toggleLegend(){
     <div class="li"><span style="width:4px;height:14px;background:#2f8f3a;border-radius:2px;flex:0 0 4px"></span>Has appointments</div>
     <div class="li"><span style="width:4px;height:14px;background:var(--line);border-radius:2px;flex:0 0 4px"></span>No appointments yet</div>`;
   document.querySelector('main').appendChild(el);
+}
+
+/* ---------- qj tabs ---------- */
+function switchQJTab(i,tab){
+  const qb=document.getElementById('qbox_'+i);
+  const jb=document.getElementById('jbox_'+i);
+  const tabs=document.querySelectorAll('#qjtabs_'+i+' .segtab');
+  if(!qb||!jb)return;
+  qb.style.display=tab==='q'?'block':'none';
+  jb.style.display=tab==='j'?'block':'none';
+  tabs.forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
 }
 
 /* ---------- admin ---------- */
