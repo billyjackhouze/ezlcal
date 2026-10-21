@@ -444,6 +444,60 @@ function renderQJBox(box,data,isQuote){
 }
 
 
+/* ---------- main quotes / jobs tab ---------- */
+let _mainQJCache={quotes:null,jobs:null};
+async function renderMainQJ(main,type){
+  const fmt=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
+  const label=type==='quotes'?'Quotes':'Jobs';
+  const dateKey=type==='quotes'?'quote_date':'job_date';
+  main.innerHTML=`<div class="pane"><div class="pane-header" style="padding:12px 16px;display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--border)"><input class="srch" id="${type}-srch" placeholder="Search ${label.toLowerCase()}…" style="max-width:320px" oninput="filterMainQJTable(this,'${type}')"><span class="spacer"></span><span id="${type}-count" class="muted" style="font-size:13px"></span></div><div style="overflow-x:auto"><table class="ctab" id="${type}-table"><thead><tr><th>Date</th><th>Job #</th><th>Sales</th><th>Buyer</th><th>Account</th><th>Project</th><th class="num">Total</th></tr></thead><tbody id="${type}-body"><tr><td colspan="7" class="muted" style="padding:20px;text-align:center">Loading…</td></tr></tbody></table></div></div>`;
+  if(_mainQJCache[type]){_renderMainQJRows(type,_mainQJCache[type],dateKey,fmt);return;}
+  try{
+    const r=await EZ.api('/'+type);
+    if(!r.ok)throw new Error(r.status);
+    const data=await r.json();
+    _mainQJCache[type]=data;
+    _renderMainQJRows(type,data,dateKey,fmt);
+  }catch(e){
+    const b=document.getElementById(type+'-body');
+    if(b)b.innerHTML=`<tr><td colspan="7" class="muted" style="padding:20px;text-align:center">Could not load ${label.toLowerCase()}</td></tr>`;
+  }
+}
+function _renderMainQJRows(type,rows,dateKey,fmt){
+  const tbody=document.getElementById(type+'-body');
+  const countEl=document.getElementById(type+'-count');
+  if(!tbody)return;
+  if(!rows.length){tbody.innerHTML=`<tr><td colspan="7" class="muted" style="padding:20px;text-align:center">No records found</td></tr>`;return;}
+  if(countEl)countEl.textContent=rows.length.toLocaleString()+' records';
+  tbody.innerHTML=rows.map(r=>{
+    const d=((r[dateKey]||r.quote_date||r.job_date)||'').slice(0,10)||'—';
+    const searchStr=[r.job_number,r.buyer_name,r.customer_name,r.account_name,r.project,r.po_number,r.sales_person].join(' ').toLowerCase();
+    const det=[
+      r.po_number?`<span><b>PO:</b> ${r.po_number}</span>`:'',
+      r.invoice_number?`<span><b>Invoice #:</b> ${r.invoice_number}</span>`:'',
+      r.invoice_date?`<span><b>Inv Date:</b> ${(r.invoice_date||'').slice(0,10)}</span>`:'',
+      r.date_shipped?`<span><b>Shipped:</b> ${(r.date_shipped||'').slice(0,10)}</span>`:'',
+      r.billing_terms?`<span><b>Terms:</b> ${r.billing_terms}</span>`:'',
+      r.job_status?`<span><b>Status:</b> ${r.job_status}</span>`:'',
+      r.enduser_ref?`<span><b>End User Ref:</b> ${r.enduser_ref}</span>`:'',
+    ].filter(Boolean).join('');
+    const breakdown=(r.clamps_total||r.pipejacks_total||r.specialty_total)?
+      `<div class="qjbreakdown">${r.clamps_total?`<span>Clamps: ${fmt.format(r.clamps_total)}</span>`:''}${r.pipejacks_total?`<span>Pipe Jacks: ${fmt.format(r.pipejacks_total)}</span>`:''}${r.specialty_total?`<span>Specialty: ${fmt.format(r.specialty_total)}</span>`:''}</div>`:'';
+    return `<tr class="qjrow" onclick="toggleQJDetail(this)" style="cursor:pointer" data-search="${searchStr}"><td>${d}</td><td>${r.job_number||'—'}</td><td>${r.sales_person||'—'}</td><td>${r.buyer_name||'—'}</td><td>${r.customer_name||'—'}</td><td>${r.project||'—'}</td><td class="num">${r.total_amount?fmt.format(r.total_amount):'—'}</td></tr><tr class="qjdetail" style="display:none"><td colspan="7"><div class="qjdetail-body">${det}${breakdown}</div></td></tr>`;
+  }).join('');
+}
+function filterMainQJTable(inp,type){
+  const tbody=document.getElementById(type+'-body');
+  if(!tbody)return;
+  const q=inp.value.toLowerCase();
+  tbody.querySelectorAll('tr.qjrow').forEach(tr=>{
+    const match=!q||tr.dataset.search.includes(q);
+    tr.style.display=match?'':'none';
+    const det=tr.nextElementSibling;
+    if(det&&det.classList.contains('qjdetail'))det.style.display='none';
+  });
+}
+
 /* ---------- render ---------- */
 function renderStatus(){
   const el=$('#status'); if(!el)return;
@@ -458,7 +512,7 @@ function renderStatus(){
 }
 function render(){
   const app=$('#app');
-  const tabs=[['team','Team'],['cal','Calendar'],['map','Map'],['a','Accounts'],['c','Contacts'],['s','Staff']].concat(EZ.user.is_admin?[['admin','Admin']]:[]);
+  const tabs=[['team','Team'],['cal','Calendar'],['map','Map'],['a','Accounts'],['c','Contacts'],['s','Staff'],['quotes','Quotes'],['jobs','Jobs']].concat(EZ.user.is_admin?[['admin','Admin']]:[]);
   app.innerHTML=`<header class="top">
     <span class="brand"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" aria-hidden="true"><path d="M3 12h18M7 7l-4 5 4 5M17 7l4 5-4 5"/></svg>EZLine CRM</span>
     <nav class="tabs" aria-label="Sections">${tabs.map(([k,l])=>`<button class="tab" data-tab="${k}" ${S.view===k?'aria-current="page"':''}>${l}</button>`).join('')}</nav>
@@ -473,6 +527,8 @@ function render(){
   else if(S.view==='cal') renderCal(main);
   else if(S.view==='admin') renderAdmin(main);
   else if(S.view==='map') renderMap(main);
+  else if(S.view==='quotes') renderMainQJ(main,'quotes');
+  else if(S.view==='jobs') renderMainQJ(main,'jobs');
   else renderEntity(main,S.view);
   renderStatus();
   if(S.modal) renderModal();
@@ -626,7 +682,7 @@ function detailHtml(k,i){
         ${offs.length?offs.map(officeCard).join(''):'<div class="muted" style="font-size:12.5px;padding:8px 0">No offices yet. Add the HQ, accounting or sales office addresses here.</div>'}</div></div>
       ${people.length?`<div class="box"><div class="boxhead"><b>Contacts</b><span class="muted">${people.length}</span><span class="spacer"></span><button class="btn" style="height:26px;padding:0 9px;font-size:12px" onclick="openNewContact(${i})">+ Add contact</button></div><div style="overflow-x:auto"><table class="ctab"><thead><tr><th>Name</th><th>Mobile</th><th>Direct</th><th>Email</th><th class="num">Sales YTD</th><th class="num">Prior yr</th><th class="num">Quotes YTD</th></tr></thead><tbody>
         ${people.map(c=>{const C=CON[c],L=linkBy[i+':'+c];return `<tr class="${C[12]?'':'inactive'}"><td><button class="linkbtn" data-goto="c:${c}"><b>${esc(C[0])}</b></button>${C[2]?`<div class="muted" style="font-size:12px">${esc(C[2])}</div>`:''}</td><td>${tel(C[5])}</td><td>${tel(C[4])}</td><td>${C[3]?`<a href="mailto:${esc(C[3])}">${esc(C[3])}</a>`:''}</td><td class="num">${L&&L[2]?money(L[2]):''}</td><td class="num">${L&&L[3]?money(L[3]):''}</td><td class="num">${L&&L[4]?money(L[4]):''}</td></tr>`;}).join('')}</tbody></table></div></div>`:''}
-      <div class="box" id="qjbox_${i}"><div class="boxhead" style="gap:0;padding:0 14px 0 0"><div class="segtabs" id="qjtabs_${i}" style="display:flex;gap:0;border-bottom:none"><button class="segtab active" data-tab="q" onclick="switchQJTab(${i},'q')">Quotes</button><button class="segtab" data-tab="j" onclick="switchQJTab(${i},'j')">Jobs</button></div><span class="spacer"></span><div class="qj-badges" style="display:flex;gap:8px;align-items:center"></div></div><div id="qbox_${i}" class="qjtab" style="display:block"><div class="empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div><div id="jbox_${i}" class="qjtab" style="display:none"><div class="empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div></div>
+      <div class="box" id="qbox_${i}"><div class="boxhead"><b>Quotes</b><span class="spacer"></span></div><div class="empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div><div class="box" id="jbox_${i}"><div class="boxhead"><b>Jobs</b><span class="spacer"></span></div><div class="empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div>
     ${fam.length>1?`<div class="box"><div class="boxhead"><b>Company family</b><span class="muted">parent, children and grandchildren</span><span class="spacer"></span><span class="muted" style="font-size:12px;width:86px;text-align:right">Sales YTD</span><span class="muted" style="font-size:12px;width:92px;text-align:right">Last order</span></div>
         <div style="max-height:320px;overflow:auto">${fam.map(([n,d])=>`<div class="frow" style="${n===i?'background:var(--btnOn)':''}"><span style="width:${d*16}px;flex:0 0 ${d*16}px"></span><span class="muted" style="width:14px">${d?'└':'◆'}</span><button class="linkbtn" data-goto="a:${n}" style="flex:1;min-width:0;${d?'':'font-weight:600'}">${esc(ACC[n][0])}</button><span class="num" style="width:86px">${money(ACC[n][4])}</span><span class="num muted" style="width:92px">${ACC[n][7]?fmtDate(ACC[n][7]):'—'}</span></div>`).join('')}</div></div>`:''}
     </section><aside class="activity pane"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">All activity</b>${fam.length>1?`<label class="muted" style="font-size:12px;display:flex;gap:6px;align-items:center"><input type="checkbox" data-fam ${S.fam?'checked':''}>Whole family</label>`:''}</div>${timeline(evs)}</aside>`;
@@ -844,15 +900,6 @@ function toggleLegend(){
 }
 
 /* ---------- qj tabs ---------- */
-function switchQJTab(i,tab){
-  const qb=document.getElementById('qbox_'+i);
-  const jb=document.getElementById('jbox_'+i);
-  const tabs=document.querySelectorAll('#qjtabs_'+i+' .segtab');
-  if(!qb||!jb)return;
-  qb.style.display=tab==='q'?'block':'none';
-  jb.style.display=tab==='j'?'block':'none';
-  tabs.forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
-}
 
 /* ---------- admin ---------- */
 let ADM=null, admBusy=false;

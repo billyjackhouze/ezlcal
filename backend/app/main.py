@@ -401,6 +401,42 @@ def get_jobs(account_id: str, u: dict = Depends(current_user)):
         "totals": {str(int(t["yr"])): float(t["total"] or 0) for t in totals if t["yr"]}
     }
 
+# ---------- global quotes and jobs ----------
+@app.get("/api/quotes")
+def get_all_quotes(u: dict = Depends(current_user)):
+    with pool.connection() as c:
+        rows = c.execute(
+            "SELECT q.job_number, q.quote_date, q.job_date, q.date_shipped,"
+            " q.sales_person, q.buyer_name, q.customer_name, q.project,"
+            " q.enduser_ref, q.po_number, q.invoice_number, q.invoice_date,"
+            " q.billing_terms, q.job_status, q.clamps_total, q.pipejacks_total,"
+            " q.specialty_total, q.total_amount, a.name AS account_name"
+            " FROM account_quotes q"
+            " LEFT JOIN accounts a ON a.id = q.account_id"
+            " WHERE q.record_type = 'quote'"
+            " ORDER BY coalesce(q.quote_date, q.job_date) DESC NULLS LAST"
+            " LIMIT 5000"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+@app.get("/api/jobs")
+def get_all_jobs(u: dict = Depends(current_user)):
+    with pool.connection() as c:
+        rows = c.execute(
+            "SELECT q.job_number, q.quote_date, q.job_date, q.date_shipped,"
+            " q.sales_person, q.buyer_name, q.customer_name, q.project,"
+            " q.enduser_ref, q.po_number, q.invoice_number, q.invoice_date,"
+            " q.billing_terms, q.job_status, q.clamps_total, q.pipejacks_total,"
+            " q.specialty_total, q.total_amount, a.name AS account_name"
+            " FROM account_quotes q"
+            " LEFT JOIN accounts a ON a.id = q.account_id"
+            " WHERE q.record_type = 'job'"
+            " ORDER BY coalesce(q.job_date, q.quote_date) DESC NULLS LAST"
+            " LIMIT 5000"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
 # ---------- map ----------
 @app.get("/api/map")
 def get_map(u: dict = Depends(current_user)):
