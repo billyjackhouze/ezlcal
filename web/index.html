@@ -360,7 +360,7 @@ applyTheme();
 function go(view,kind,i){S.view=view; if(kind)S.sel[kind]=i; render(); const m=$('main'); if(m)m.scrollTop=0;}
 window.__go=go;
 function loadQuotesJobs(acctIdx){
-  const aid=K.a[acctIdx];
+  const aid=EZ.akey(acctIdx);
   if(!aid)return;
   ['q','j'].forEach(t=>{
     const box=document.getElementById(t+'box_'+acctIdx);
@@ -542,7 +542,7 @@ function renderEntity(main,k){
   main.className='split'+(sel>=0?' has':'');
   main.innerHTML=`<section class="listpane" aria-label="List"><div class="listhead"><input class="search" id="q" type="search" placeholder="${ph}" value="${esc(S.q[k])}" aria-label="${ph}">${k==='a'?'<button class="btn" id="qadd" style="flex:0 0 auto">+ Company</button>':k==='c'?'<button class="btn" id="qadd" style="flex:0 0 auto">+ Contact</button>':''}</div><div class="list">${rows||'<div class="empty">No matches</div>'}</div></section>
     ${sel>=0?detailHtml(k,sel):'<section class="detail"><div class="empty">Pick a record on the left.</div></section>'}`;
-  if(k==='a'&&sel>=0)setTimeout(()=>loadQuotesJobs(sel),0);
+  if(k==='a'&&sel>=0)requestAnimationFrame(()=>requestAnimationFrame(()=>loadQuotesJobs(sel)));
   const qi=$('#q');const qadd=$('#qadd');if(qadd)qadd.onclick=()=>{if(k==='a')openNewAccount();else openNewContact(-1);};qi.oninput=e=>{S.q[k]=e.target.value;const pos=e.target.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(pos,pos);};
 }
 function detailHtml(k,i){
