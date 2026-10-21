@@ -234,7 +234,7 @@ def build(raw, accounts_existing=None):
     """
     accounts = {}
     for r in raw["accounts"]:
-        k = key(r.get("z_Kp_CRMaccounts_txt"))
+        k = key(r.get("z_Kp_CRMaccounts_txt")) or key(r.get("z_Kp_CRMaccounts"))
         if not k or not s(r.get("Account_Name_stored")):
             continue
         accounts[k] = (
@@ -251,7 +251,8 @@ def build(raw, accounts_existing=None):
     # numeric FK -> UUID lookup (for offices)
     numeric_to_uuid = {}
     for r in raw["accounts"]:
-        uuid = key(r.get("z_Kp_CRMaccounts_txt"))
+        # Live file uses z_Kp_CRMaccounts (UUID text), Dev uses z_Kp_CRMaccounts_txt
+        uuid = key(r.get("z_Kp_CRMaccounts_txt")) or key(r.get("z_Kp_CRMaccounts"))
         if not uuid:
             continue
         for fk in ("z_Kf_Customer", "z_Kf_Enduser", "z_Kf_Engineering"):
