@@ -1,0 +1,5 @@
+content = open('app/fmsync.py', encoding='utf-8').read()
+content = content.replace("source='\"'\"'fm'\"'\"'", "source='fm'")
+content = content.replace("source='\"'\"'filemaker'\"'\"'", "source='filemaker'")
+open('app/fmsync.py', 'w', encoding='utf-8').write(content)
+print('done')

@@ -119,7 +119,7 @@ def ensure_schema(c):
     # Add new columns if upgrading from older schema
     for col, defn in [
         ("date_shipped", "DATE"), ("enduser_ref", "TEXT"), ("po_number", "TEXT"),
-        ("invoice_number", "TEXT"), ("invoice_date", "DATE"), ("billing_terms", "TEXT"),
+        ("invoice_number", "TEXT"), ("invoice_date", "DATE"), ("billing_address", "TEXT"), ("billing_city", "TEXT"), ("billing_state", "TEXT"), ("billing_zip", "TEXT"), ("billing_terms", "TEXT"),
         ("job_status", "TEXT"), ("clamps_total", "NUMERIC(14,2)"),
         ("pipejacks_total", "NUMERIC(14,2)"), ("specialty_total", "NUMERIC(14,2)"),
     ]:
@@ -219,6 +219,10 @@ def run(full=False):
             s(r.get("REFERENCE_enduser")), s(r.get("P.O. NUMBER")),
             s(r.get("INVOICE NUMBER")), parse_date(r.get("INVOICE_DATE")),
             s(r.get("BILLING TERMS")), s(r.get("JOB_Status")),
+            s(r.get("schedule.QUOTE_HEADER|quote_header_ID.primary::Billing Address")),
+            s(r.get("schedule.QUOTE_HEADER|quote_header_ID.primary::Billing City")),
+            s(r.get("schedule.QUOTE_HEADER|quote_header_ID.primary::Billing State")),
+            s(r.get("schedule.QUOTE_HEADER|quote_header_ID.primary::Billing Zip")),
             num(r.get("CLAMPS::Line Item Price Total", 0)),
             num(r.get("PipeJacks::Line Item Price Total", 0)),
             num(r.get("SpecialtyItems::LINE ITEM PRICE Total", 0)),
@@ -234,9 +238,10 @@ def run(full=False):
                     (id, account_id, fm_customer_id, job_number, record_type,
                      quote_date, job_date, date_shipped, sales_person, buyer_name,
                      customer_name, project, enduser_ref, po_number, invoice_number,
-                     invoice_date, billing_terms, job_status, clamps_total,
-                     pipejacks_total, specialty_total, total_amount, updated_at)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
+                     invoice_date, billing_terms, job_status,
+                     billing_address, billing_city, billing_state, billing_zip,
+                     clamps_total, pipejacks_total, specialty_total, total_amount, updated_at)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
                 ON CONFLICT (id) DO UPDATE SET
                     account_id=EXCLUDED.account_id,
                     quote_date=EXCLUDED.quote_date, job_date=EXCLUDED.job_date,
@@ -246,6 +251,8 @@ def run(full=False):
                     enduser_ref=EXCLUDED.enduser_ref, po_number=EXCLUDED.po_number,
                     invoice_number=EXCLUDED.invoice_number, invoice_date=EXCLUDED.invoice_date,
                     billing_terms=EXCLUDED.billing_terms, job_status=EXCLUDED.job_status,
+                    billing_address=EXCLUDED.billing_address, billing_city=EXCLUDED.billing_city,
+                    billing_state=EXCLUDED.billing_state, billing_zip=EXCLUDED.billing_zip,
                     clamps_total=EXCLUDED.clamps_total, pipejacks_total=EXCLUDED.pipejacks_total,
                     specialty_total=EXCLUDED.specialty_total,
                     total_amount=EXCLUDED.total_amount, updated_at=now()
