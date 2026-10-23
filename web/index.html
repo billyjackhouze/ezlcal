@@ -259,7 +259,7 @@ async function start(){
     contacts:boot.contacts.map(c=>[c[1],c[2]!=null&&IX.a.has(c[2])?IX.a.get(c[2]):-1,c[3]||'',c[4]||'',c[5]||'',c[6]||'',c[7]||'',c[8]||'',c[9]||'',c[10]||'',c[11]||'',!!c[12],c[13]!==false]),
     links:(boot.links||[]).map(l=>[IX.c.has(String(l[0]))?IX.c.get(String(l[0])):-1,IX.a.has(l[1])?IX.a.get(l[1]):-1,l[2]||0,l[3]||0,l[4]||0]).filter(l=>l[0]>=0&&l[1]>=0),
     offices:(boot.offices||[]).map(o=>({id:o[0],a:IX.a.has(o[1])?IX.a.get(o[1]):-1,type:o[2]||'',address:o[3]||'',city:o[4]||'',state:o[5]||'',zip:o[6]||'',phone:o[7]||'',email:o[8]||'',notes:o[9]||'',source:o[10]||'web'})).filter(o=>o.a>=0),
-    staff:boot.staff.map(s=>[s[1],s[2]||'']),
+    staff:boot.staff.map(s=>[s[1],s[2]||'',s[0]||'',s[3]||'']),
     events:Object.values(raw).map(fromServer)
   };
   window.__ezl={api,fromServer,toServer,signOut,user,akey:i=>K.a[i],_qcache:{},_jcache:{},
@@ -281,7 +281,28 @@ const TYPE={C:'Customer',U:'End user',G:'Engineering'};
 const CATC={'Luncheon':'#2f8f3a','Breakfast':'#2f8f3a','Dinner':'#2f8f3a','Lunch and learn':'#1c7c74','Outing':'#d4721c','Meeting':'#2f6fde','Site visit':'#1c7c74','Travel':'#6b6b72','Follow-up':'#7d4fc4','Trade show':'#b5487a','Company event':'#a8862a','Appointment':'#2f6fde'};
 const CATS=['Luncheon','Breakfast','Dinner','Lunch and learn','Meeting','Site visit','Outing','Trade show','Follow-up','Travel','Company event','Personal'];
 const catColor=c=>CATC[c]||'#5f6b7a';
-const staffColor=e=>{if(e&&e.att){for(const [t,i] of e.att){if(t==='s'&&i>=0&&STF[i]){const n=STF[i][0]||'';if(/tpalmer|trey/i.test(n))return '#e53935';if(/tgreen|^tim/i.test(n))return '#2e7d32';if(/goodwin|jesse/i.test(n))return '#1565c0';if(/jvela|joey|joseph/i.test(n))return '#00796b';return '#5f6b7a';}}}return '#5f6b7a';};
+const staffColor=e=>{
+  if(e&&e.createdBy){
+    const si=STF.findIndex(s=>s&&s[2]&&new RegExp(s[2].replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(e.createdBy));
+    if(si>=0&&STF[si]&&STF[si][3])return STF[si][3];
+    const cb=e.createdBy.toLowerCase();
+    if(/tpalmer|trey/.test(cb))return '#c62828';
+    if(/tgreen|tim/.test(cb))return '#2e7d32';
+    if(/goodwin|jesse/.test(cb))return '#e65100';
+    if(/jvela|joey|joseph/.test(cb))return '#6a1b9a';
+    return '#546e7a';
+  }
+  if(e&&e.att){for(const [t,i] of e.att){if(t==='s'&&i>=0&&STF[i]){
+    if(STF[i][3])return STF[i][3];
+    const n=(STF[i][0]||'').toLowerCase();
+    if(/tpalmer|trey/.test(n))return '#c62828';
+    if(/tgreen|tim/.test(n))return '#2e7d32';
+    if(/goodwin|jesse/.test(n))return '#e65100';
+    if(/jvela|joey|joseph/.test(n))return '#6a1b9a';
+    return '#546e7a';
+  }}}
+  return '#546e7a';
+}
 const $=(s,r=document)=>r.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>n?'$'+Math.round(n).toLocaleString('en-US'):'—';
@@ -575,7 +596,7 @@ function teamItem(e){const n=e.att.length;return `<button class="ti" data-open="
 function weekStart(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-x.getDay());return x;}
 function calEvents(){return S.calWho<0?events():evFor('s',S.calWho);}
 function renderCal(main){
-  const _swc=i=>{if(i<0)return '#888';const n=STF[i]?STF[i][0]||'':'';if(/tpalmer|trey/i.test(n))return '#e53935';if(/tgreen|^tim/i.test(n))return '#2e7d32';if(/goodwin|jesse/i.test(n))return '#1565c0';if(/jvela|joey|joseph/i.test(n))return '#00796b';return '#5f6b7a';};
+  const _swc=i=>{if(i<0)return '#888';if(STF[i]&&STF[i][3])return STF[i][3];return _staffColorByName(STF[i]?STF[i][0]||'':'',i);};
   const _swn=S.calWho<0?'Everyone':esc(STF[S.calWho]?STF[S.calWho][0]:'');
   const _swdot=S.calWho<0?'':`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${_swc(S.calWho)};margin-right:5px;vertical-align:middle"></span>`;
   const who=`<div class="calwho-wrap" style="position:relative;display:inline-block">
@@ -913,6 +934,23 @@ function toggleLegend(){
 
 /* ---------- qj tabs ---------- */
 
+/* ---------- staff color picker ---------- */
+async function setStaffColor(staffId,color){
+  const r=await EZ.api('/staff/'+encodeURIComponent(staffId)+'/color',{method:'PUT',body:JSON.stringify({color})});
+  if(r&&r.ok)toast('Color saved');else toast('Failed to save');
+}
+function renderStaffColorPicker(el){
+  const PRESETS=['#c62828','#b71c1c','#e65100','#f57f17','#2e7d32','#1b5e20','#6a1b9a','#4a148c','#0277bd','#01579b','#00695c','#004d40','#37474f','#263238','#4e342e','#3e2723'];
+  if(!el)return;
+  el.innerHTML='<table style="width:100%;border-collapse:collapse">'+
+    '<thead><tr><th style="text-align:left;font-size:12px;color:var(--sub);padding:4px 8px;font-weight:500">Name</th><th style="text-align:left;font-size:12px;color:var(--sub);padding:4px 8px;font-weight:500">Color</th><th style="text-align:left;font-size:12px;color:var(--sub);padding:4px 8px;font-weight:500">Presets</th></tr></thead><tbody>'+
+    STF.map((s,i)=>{if(!s)return '';const cur=s[3]||_swc(i);return '<tr><td style="padding:6px 8px;font-size:13px">'+esc(s[0])+'</td>'+
+      '<td style="padding:6px 8px"><div style="display:flex;gap:6px;align-items:center">'+
+      '<input type="color" value="'+cur+'" id="scc_'+i+'" onchange="STF['+i+'][3]=this.value;document.getElementById('scd_'+i+'').style.background=this.value;setStaffColor('+JSON.stringify(s[2])+',this.value)" style="width:36px;height:28px;border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:2px">'+
+      '<span id="scd_'+i+'" style="display:inline-block;width:22px;height:22px;border-radius:50%;background:'+cur+'"></span></div></td>'+
+      '<td style="padding:6px 8px"><div style="display:flex;gap:3px;flex-wrap:wrap">'+PRESETS.map(c=>'<button onclick="STF['+i+'][3]=''+c+'';document.getElementById('scc_'+i+'').value=''+c+'';document.getElementById('scd_'+i+'').style.background=''+c+'';setStaffColor('+JSON.stringify(s[2])+',''+c+'')" style="width:18px;height:18px;border-radius:50%;background:'+c+';border:2px solid '+(cur===c?'#000':'transparent')+';cursor:pointer;padding:0"></button>').join('')+'</div></td></tr>';}).join('')+
+    '</tbody></table>';
+}
 /* ---------- admin ---------- */
 let ADM=null, admBusy=false;
 async function loadAdmin(){
@@ -939,8 +977,10 @@ function renderAdmin(main){
   main.innerHTML=`<div class="adm"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px"><h1 style="flex:1">People and logins</h1>
     <span class="muted">${ADM.users.filter(u=>!u.disabled).length} active of ${ADM.users.length}</span><button class="btn primary" data-adm="new">+ Add person</button></div>
     <div style="overflow-x:auto"><table><thead><tr><th>Name</th><th>Username</th><th>Staff record (calendar)</th><th>Access</th><th>Last sign-in</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
-    <p class="muted" style="font-size:12px;margin-top:14px">Turning someone off signs them out everywhere and blocks sign-in; their appointments and history stay. A staff record is what puts a person on the Team view and in the invitee list.</p></div>`;
+    <p class="muted" style="font-size:12px;margin-top:14px">Turning someone off signs them out everywhere and blocks sign-in; their appointments and history stay. A staff record is what puts a person on the Team view and in the invitee list.</p></div>
+  <div class="box" style="margin-top:16px"><div class="boxhead"><b>Staff Calendar Colors</b></div><div id="staff-color-picker" style="padding:10px 14px"></div></div>`;
   wireAdmin(main);
+  requestAnimationFrame(()=>{const el=document.getElementById('staff-color-picker');if(el)renderStaffColorPicker(el);});
 }
 async function admCall(path,opt,okMsg){
   try{const r=await EZ.api(path,opt);const j=await r.json().catch(()=>({}));
@@ -1030,11 +1070,8 @@ function renderModal(){
       ${e.notes?`<div style="margin-top:14px;white-space:pre-wrap">${esc(e.notes)}</div>`:''}
       <div class="muted" style="font-size:12px;margin-top:14px">Shows on the timeline of every account, contact and staff member above.</div></div>
       <div class="foot"><button class="btn" id="m_del">Delete</button><button class="btn" id="m_fu">Schedule follow-up</button></div></div></div>`;
-    $('#m_x').onclick=closeModal;
-    const _can=!e.createdBy||e.createdBy===EZ.user.username;
-    const _eb=$('#m_edit'),_db=$('#m_del');
-    if(_eb){_eb.onclick=()=>{if(_can)openEditor(e.id);else toast('Only the creator can edit this.');};_eb.style.opacity=_can?'1':'0.4';}
-    if(_db){_db.onclick=()=>{if(!_can){toast('Only the creator can delete this.');return;}if(confirm('Delete "'+e.title+'"?')){const b=JSON.parse(JSON.stringify(e));b.deleted=true;closeModal();saveEvent(b);toast('Appointment deleted');}};_db.style.opacity=_can?'1':'0.4';}
+    $('#m_x').onclick=closeModal;$('#m_edit').onclick=()=>openEditor(e.id);
+    $('#m_del').onclick=()=>{if(confirm('Delete "'+e.title+'"?')){const b=JSON.parse(JSON.stringify(e));b.deleted=true;closeModal();saveEvent(b);toast('Appointment deleted');}};
     $('#m_fu').onclick=()=>{openEditor(null,{title:'Follow-up: '+e.title,date:iso(addDays(parseD(e.date),7)),cat:'Follow-up',att:JSON.parse(JSON.stringify(e.att)),notes:''});};
   } else {
     const e=M.ev;const g=group(e.att);
