@@ -252,7 +252,7 @@ async function start(){
   const K={a:boot.accounts.map(a=>a[0]),c:boot.contacts.map(c=>c[0]),s:boot.staff.map(s=>s[0])};
   const IX={a:new Map(K.a.map((k,i)=>[k,i])),c:new Map(K.c.map((k,i)=>[k,i])),s:new Map(K.s.map((k,i)=>[k,i]))};
   const toIdx=att=>(att||[]).map(([t,k])=>[t,IX[t]?IX[t].get(String(k)):undefined]).filter(x=>x[1]!==undefined);
-  const fromServer=e=>({id:e.id,title:e.title,date:e.date,time:e.time||'',end:e.end||'',allDay:!e.time,cat:e.cat||'',loc:e.loc||'',notes:e.notes||'',deleted:!!e.deleted,att:toIdx(e.att),updatedAt:e.updatedAt,updatedBy:e.updatedBy});
+  const fromServer=e=>({id:e.id,title:e.title,date:e.date,time:e.time||'',end:e.end||'',allDay:!e.time,cat:e.cat||'',loc:e.loc||'',notes:e.notes||'',deleted:!!e.deleted,att:toIdx(e.att),updatedAt:e.updatedAt,updatedBy:e.updatedBy,createdBy:e.createdBy||''});
   const toServer=e=>({id:e.id,title:e.title,date:e.date,time:e.time||'',end:e.end||'',cat:e.cat||'',loc:e.loc||'',notes:e.notes||'',deleted:!!e.deleted,updatedAt:e.updatedAt,att:(e.att||[]).map(([t,i])=>[t,K[t][i]])});
   const D={
     accounts:boot.accounts.map(a=>[a[1],a[2]||'',a[3]!=null&&IX.a.has(a[3])?IX.a.get(a[3]):-1,a[4]!=null&&IX.a.has(a[4])?IX.a.get(a[4]):-1,a[5]||0,a[6]||0,a[7]||0,a[8]||'',a[9]||'',a[10]||'',a[11]||'',a[12]||'',a[13]||'']),
@@ -279,8 +279,9 @@ window.__start=function(D){
 const ACC=D.accounts, CON=D.contacts, STF=D.staff;
 const TYPE={C:'Customer',U:'End user',G:'Engineering'};
 const CATC={'Luncheon':'#2f8f3a','Breakfast':'#2f8f3a','Dinner':'#2f8f3a','Lunch and learn':'#1c7c74','Outing':'#d4721c','Meeting':'#2f6fde','Site visit':'#1c7c74','Travel':'#6b6b72','Follow-up':'#7d4fc4','Trade show':'#b5487a','Company event':'#a8862a','Appointment':'#2f6fde'};
-const CATS=['Luncheon','Breakfast','Dinner','Lunch and learn','Meeting','Site visit','Outing','Trade show','Follow-up','Travel','Company event'];
+const CATS=['Luncheon','Breakfast','Dinner','Lunch and learn','Meeting','Site visit','Outing','Trade show','Follow-up','Travel','Company event','Personal'];
 const catColor=c=>CATC[c]||'#5f6b7a';
+const staffColor=e=>{if(e&&e.att){for(const [t,i] of e.att){if(t==='s'&&i>=0&&STF[i]){const n=STF[i][0]||'';if(/tpalmer|trey/i.test(n))return '#e53935';if(/tgreen|^tim/i.test(n))return '#2e7d32';if(/goodwin|jesse/i.test(n))return '#1565c0';if(/jvela|joey|joseph/i.test(n))return '#00796b';return '#5f6b7a';}}}return '#5f6b7a';};
 const $=(s,r=document)=>r.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>n?'$'+Math.round(n).toLocaleString('en-US'):'—';
@@ -568,26 +569,35 @@ function renderTeam(main){
     </section>`;}).join('');
   main.innerHTML=`<div style="display:flex;flex-direction:column;flex:1;min-height:0"><div class="calbar"><span class="muted">Show:</span><div class="chips">${pick}</div></div><div class="team">${cols||'<div class="empty">Pick team members above.</div>'}</div></div>`;
 }
-function teamItem(e){const n=e.att.length;return `<button class="ti" data-open="${esc(e.id)}"><span class="d" style="background:${catColor(e.cat)}"></span><span style="flex:1;min-width:0"><span style="display:block">${esc(e.title)}</span><span class="muted" style="display:block;font-size:12px">${esc(e.loc||e.cat||'')}${n>1?' · '+n+' invited':''}</span></span><span class="tm">${fmtTime(e.time)}</span></button>`;}
+function teamItem(e){const n=e.att.length;return `<button class="ti" data-open="${esc(e.id)}"><span class="d" style="background:${staffColor(e)}"></span><span style="flex:1;min-width:0"><span style="display:block">${esc(e.title)}</span><span class="muted" style="display:block;font-size:12px">${esc(e.loc||e.cat||'')}${n>1?' · '+n+' invited':''}</span></span><span class="tm">${fmtTime(e.time)}</span></button>`;}
 
 /* ---------- calendar ---------- */
 function weekStart(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-x.getDay());return x;}
 function calEvents(){return S.calWho<0?events():evFor('s',S.calWho);}
 function renderCal(main){
-  const who=`<select id="calwho" class="btn" aria-label="Whose calendar">${['<option value="-1">Everyone</option>'].concat(STF.map((s,i)=>`<option value="${i}" ${S.calWho===i?'selected':''}>${esc(s[0])}</option>`)).join('')}</select>`;
+  const _swc=i=>{if(i<0)return '#888';const n=STF[i]?STF[i][0]||'':'';if(/tpalmer|trey/i.test(n))return '#e53935';if(/tgreen|^tim/i.test(n))return '#2e7d32';if(/goodwin|jesse/i.test(n))return '#1565c0';if(/jvela|joey|joseph/i.test(n))return '#00796b';return '#5f6b7a';};
+  const _swn=S.calWho<0?'Everyone':esc(STF[S.calWho]?STF[S.calWho][0]:'');
+  const _swdot=S.calWho<0?'':`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${_swc(S.calWho)};margin-right:5px;vertical-align:middle"></span>`;
+  const who=`<div class="calwho-wrap" style="position:relative;display:inline-block">
+    <button class="btn" id="calwho-btn" onclick="toggleCalWho()" style="min-width:130px;text-align:left">${_swdot}${_swn} ▾</button>
+    <div id="calwho-dd" style="display:none;position:absolute;top:100%;left:0;z-index:999;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);min-width:160px;padding:4px 0;margin-top:2px">
+      <button class="calwho-opt" onclick="pickCalWho(-1)" style="display:flex;align-items:center;gap:8px;width:100%;padding:7px 12px;border:0;background:${S.calWho===-1?'var(--hover)':'var(--card)'};cursor:pointer;font-size:13px;text-align:left"><span style="width:8px;height:8px;border-radius:50%;background:#888;flex:0 0 8px"></span>Everyone</button>
+      ${STF.map((s,i)=>`<button class="calwho-opt" onclick="pickCalWho(${i})" style="display:flex;align-items:center;gap:8px;width:100%;padding:7px 12px;border:0;background:${S.calWho===i?'var(--hover)':'var(--card)'};cursor:pointer;font-size:13px;text-align:left"><span style="width:8px;height:8px;border-radius:50%;background:${_swc(i)};flex:0 0 8px"></span>${esc(s[0])}</button>`).join('')}
+    </div>
+  </div>`;
   let title,body;
   if(S.calMode==='week'){
     const ws=weekStart(S.calDate);const days=[...Array(7)].map((_,k)=>addDays(ws,k));
     title=days[0].toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+days[6].toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
     const evs=calEvents();const H0=6,H1=21;
     let g=`<div class="wgrid"><div class="whead"></div>${days.map(d=>`<div class="whead ${iso(d)===TODAY?'today':''}">${d.toLocaleDateString('en-US',{weekday:'short'})} ${d.getDate()}</div>`).join('')}`;
-    g+=`<div class="allday muted" style="font-size:11px;text-align:right;padding-right:6px;border-left:0">all-day</div>`+days.map(d=>{const ds=iso(d);return `<div class="allday">${evs.filter(e=>e.date===ds&&!e.time).map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${catColor(e.cat)}">${esc(e.title)}</button>`).join('')}</div>`;}).join('');
+    g+=`<div class="allday muted" style="font-size:11px;text-align:right;padding-right:6px;border-left:0">all-day</div>`+days.map(d=>{const ds=iso(d);return `<div class="allday">${evs.filter(e=>e.date===ds&&!e.time).map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${staffColor(e)}">${esc(e.title)}</button>`).join('')}</div>`;}).join('');
     g+=`<div>${[...Array(H1-H0)].map((_,k)=>`<div class="hcell">${fmtTime(pad(H0+k)+':00').replace(':00','')}</div>`).join('')}</div>`;
     g+=days.map(d=>{const ds=iso(d);const timed=evs.filter(e=>e.date===ds&&e.time);
       const lanes=[];timed.forEach(e=>{const s=toMin(e.time),en=e.end?toMin(e.end):s+60;let L=0;while(lanes[L]&&lanes[L]>s)L++;lanes[L]=en;e._l=L;});
       const n=Math.max(1,lanes.length);
       const blocks=timed.map(e=>{const s=toMin(e.time),en=e.end?toMin(e.end):s+60;const top=Math.max(0,(s-H0*60))*48/60,h=Math.max(22,(en-s)*48/60);const w=100/n;
-        return `<button class="blk" data-open="${esc(e.id)}" style="top:${top}px;height:${h}px;left:calc(${e._l*w}% + 2px);width:calc(${w}% - 4px);background:${catColor(e.cat)}"><b>${fmtTime(e.time)}</b> ${esc(e.title)}</button>`;}).join('');
+        return `<button class="blk" data-open="${esc(e.id)}" style="top:${top}px;height:${h}px;left:calc(${e._l*w}% + 2px);width:calc(${w}% - 4px);background:${staffColor(e)}"><b>${fmtTime(e.time)}</b> ${esc(e.title)}</button>`;}).join('');
       let nowl='';if(ds===TODAY){const nw=new Date();const m=nw.getHours()*60+nw.getMinutes();if(m>H0*60&&m<H1*60)nowl=`<div class="nowline" style="top:${(m-H0*60)*48/60}px"></div>`;}
       return `<div class="dcol ${ds===TODAY?'today':''}">${[...Array(H1-H0)].map((_,k)=>`<div class="slot" data-slot="${ds}|${H0+k}" title="New appointment"></div>`).join('')}${blocks}${nowl}</div>`;}).join('');
     body=`<div class="week" id="wk">${g}</div></div>`;
@@ -595,14 +605,16 @@ function renderCal(main){
     const f=new Date(S.calDate.getFullYear(),S.calDate.getMonth(),1);const st=weekStart(f);title=f.toLocaleDateString('en-US',{month:'long',year:'numeric'});
     const evs=calEvents();
     body=`<div class="month">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div class="whead" style="position:static">${d}</div>`).join('')}${[...Array(42)].map((_,k)=>{const d=addDays(st,k),ds=iso(d);const es=evs.filter(e=>e.date===ds);
-      return `<div class="mcell ${d.getMonth()!==f.getMonth()?'out':''} ${ds===TODAY?'today':''}"><div class="n"><button class="more" data-slot="${ds}|" aria-label="New appointment on ${ds}">${d.getDate()}</button></div>${es.slice(0,3).map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${catColor(e.cat)}">${e.time?fmtTime(e.time).replace(':00','')+' ':''}${esc(e.title)}</button>`).join('')}${es.length>3?`<button class="more" data-calmode="list">+${es.length-3} more</button>`:''}</div>`;}).join('')}</div>`;
+      return `<div class="mcell ${d.getMonth()!==f.getMonth()?'out':''} ${ds===TODAY?'today':''}"><div class="n"><button class="more" data-slot="${ds}|" aria-label="New appointment on ${ds}">${d.getDate()}</button></div>${es.slice(0,3).map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${staffColor(e)}">${e.time?fmtTime(e.time).replace(':00','')+' ':''}${esc(e.title)}</button>`).join('')}${es.length>3?`<button class="more" data-calmode="list">+${es.length-3} more</button>`:''}</div>`;}).join('')}</div>`;
   } else {
     title='Upcoming';const evs=calEvents().filter(e=>e.date>=iso(addDays(new Date(),-30)));
     body=`<div class="listview">${timeline(evs,false)}</div>`;
   }
   main.innerHTML=`<div class="cal"><div class="calbar">${who}<div class="seg">${[['week','Week'],['month','Month'],['list','List']].map(([k,l])=>`<button data-calmode="${k}" aria-pressed="${S.calMode===k}">${l}</button>`).join('')}</div>
     <h2>${esc(title)}</h2><button class="btn icon" data-cal="-1" aria-label="Previous">‹</button><button class="btn" data-cal="0">Today</button><button class="btn icon" data-cal="1" aria-label="Next">›</button></div>${body}`;
-  $('#calwho').onchange=e=>{S.calWho=+e.target.value;render();};
+  window.toggleCalWho=()=>{const dd=document.getElementById('calwho-dd');if(dd)dd.style.display=dd.style.display==='none'?'block':'none';};
+  window.pickCalWho=i=>{S.calWho=i;const dd=document.getElementById('calwho-dd');if(dd)dd.style.display='none';render();};
+  document.addEventListener('click',e=>{if(!e.target.closest('.calwho-wrap')){const dd=document.getElementById('calwho-dd');if(dd)dd.style.display='none';}},true);;
   const wk=$('#wk');if(wk)wk.scrollTop=48*1.5;
 }
 const toMin=t=>{const [h,m]=t.split(':').map(Number);return h*60+m;};
@@ -618,7 +630,7 @@ function timeline(evs,newestFirst=true){
     if(newestFirst&&!nowDone&&e.date<=TODAY){out+='<div class="now"><i></i><span></span><em>Now</em></div>';nowDone=true;}
     if(y!==yr){out+=`<h2 class="year">${e.date>TODAY&&newestFirst?'Upcoming':y}</h2>`;yr=e.date>TODAY&&newestFirst?'up':y; if(e.date<=TODAY&&yr==='up'){}}
     const who=e.att.slice(0,6).map(([t,i])=>name(t,i)).join(', ')+(e.att.length>6?' +'+(e.att.length-6):'');
-    out+=`<article class="ev"><span class="bar" style="background:${catColor(e.cat)}"></span><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:8px"><button class="linkbtn t" data-open="${esc(e.id)}">${esc(e.title)}</button><span style="color:var(--year);font-size:12px;white-space:nowrap">${fmtDate(e.date)}${e.time?', '+fmtTime(e.time):''}</span></div>
+    out+=`<article class="ev"><span class="bar" style="background:${staffColor(e)}"></span><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:8px"><button class="linkbtn t" data-open="${esc(e.id)}">${esc(e.title)}</button><span style="color:var(--year);font-size:12px;white-space:nowrap">${fmtDate(e.date)}${e.time?', '+fmtTime(e.time):''}</span></div>
       <div class="meta">${esc(e.cat||'')}${e.loc?' at '+esc(e.loc):''}</div><div class="meta">${esc(who)}</div>${e.notes?`<p>${esc(e.notes.length>240?e.notes.slice(0,240)+'…':e.notes)}</p>`:''}</div></article>`;
   }
   return out;
@@ -887,12 +899,12 @@ function toggleLegend(){
     <div class="li"><span class="sw" style="background:#1c7c74"></span>Customer + End user</div>
     <div class="li"><span class="sw" style="background:#7d4fc4"></span>Customer + Engineering</div>
     <b style="margin-top:10px;display:block">Appointment colors</b>
-    <div class="li"><span class="bar" style="background:#2f8f3a"></span>Customer visit / meal</div>
-    <div class="li"><span class="bar" style="background:#2f6fde"></span>Meeting</div>
-    <div class="li"><span class="bar" style="background:#d4721c"></span>Outing</div>
-    <div class="li"><span class="bar" style="background:#1c7c74"></span>Lunch & learn / site visit</div>
-    <div class="li"><span class="bar" style="background:#7d4fc4"></span>Follow-up</div>
-    <div class="li"><span class="bar" style="background:#6b6b72"></span>Travel</div>
+    <div class="li"><span class="bar" style="background:#e53935"></span>Trey Palmer</div>
+    <div class="li"><span class="bar" style="background:#2e7d32"></span>Tim Green</div>
+    <div class="li"><span class="bar" style="background:#1565c0"></span>Jesse Goodwin</div>
+    <div class="li"><span class="bar" style="background:#00796b"></span>Joseph Vela</div>
+    <div class="li"><span class="bar" style="background:#5f6b7a"></span>Other staff</div>
+    <div class="li"></div>
     <b style="margin-top:10px;display:block">Account list</b>
     <div class="li"><span style="width:4px;height:14px;background:#2f8f3a;border-radius:2px;flex:0 0 4px"></span>Has appointments</div>
     <div class="li"><span style="width:4px;height:14px;background:var(--line);border-radius:2px;flex:0 0 4px"></span>No appointments yet</div>`;
@@ -1018,8 +1030,11 @@ function renderModal(){
       ${e.notes?`<div style="margin-top:14px;white-space:pre-wrap">${esc(e.notes)}</div>`:''}
       <div class="muted" style="font-size:12px;margin-top:14px">Shows on the timeline of every account, contact and staff member above.</div></div>
       <div class="foot"><button class="btn" id="m_del">Delete</button><button class="btn" id="m_fu">Schedule follow-up</button></div></div></div>`;
-    $('#m_x').onclick=closeModal;$('#m_edit').onclick=()=>openEditor(e.id);
-    $('#m_del').onclick=()=>{if(confirm('Delete "'+e.title+'"?')){const b=JSON.parse(JSON.stringify(e));b.deleted=true;closeModal();saveEvent(b);toast('Appointment deleted');}};
+    $('#m_x').onclick=closeModal;
+    const _can=!e.createdBy||e.createdBy===EZ.user.username;
+    const _eb=$('#m_edit'),_db=$('#m_del');
+    if(_eb){_eb.onclick=()=>{if(_can)openEditor(e.id);else toast('Only the creator can edit this.');};_eb.style.opacity=_can?'1':'0.4';}
+    if(_db){_db.onclick=()=>{if(!_can){toast('Only the creator can delete this.');return;}if(confirm('Delete "'+e.title+'"?')){const b=JSON.parse(JSON.stringify(e));b.deleted=true;closeModal();saveEvent(b);toast('Appointment deleted');}};_db.style.opacity=_can?'1':'0.4';}
     $('#m_fu').onclick=()=>{openEditor(null,{title:'Follow-up: '+e.title,date:iso(addDays(parseD(e.date),7)),cat:'Follow-up',att:JSON.parse(JSON.stringify(e.att)),notes:''});};
   } else {
     const e=M.ev;const g=group(e.att);

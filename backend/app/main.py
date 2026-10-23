@@ -274,7 +274,7 @@ class EventIn(BaseModel):
 
 def _event_rows(c, where: str = "", params: tuple = ()) -> list[dict]:
     evs = c.execute(
-        "SELECT id,title,date,start_time,end_time,category,location,notes,deleted,updated_at,updated_by "
+        "SELECT id,title,date,start_time,end_time,category,location,notes,deleted,updated_at,updated_by,created_by "
         f"FROM events {where} ORDER BY updated_at", params
     ).fetchall()
     if not evs:
@@ -287,7 +287,7 @@ def _event_rows(c, where: str = "", params: tuple = ()) -> list[dict]:
         {"id": e["id"], "title": e["title"], "date": e["date"].isoformat(), "time": e["start_time"],
          "end": e["end_time"], "cat": e["category"], "loc": e["location"], "notes": e["notes"],
          "deleted": e["deleted"], "att": att.get(e["id"], []),
-         "updatedAt": e["updated_at"].isoformat(), "updatedBy": e["updated_by"]}
+         "updatedAt": e["updated_at"].isoformat(), "updatedBy": e["updated_by"], "createdBy": e["created_by"]}
         for e in evs
     ]
 
