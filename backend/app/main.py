@@ -401,6 +401,19 @@ def get_jobs(account_id: str, u: dict = Depends(current_user)):
         "totals": {str(int(t["yr"])): float(t["total"] or 0) for t in totals if t["yr"]}
     }
 
+@app.put("/api/staff/{staff_id}/color")
+def set_staff_color(staff_id: str, body: dict, u: dict = Depends(current_user)):
+    if not u.get("is_admin"):
+        raise HTTPException(403, "Admin only")
+    color = (body.get("color") or "").strip()[:20]
+    with pool.connection() as c:
+        c.execute("ALTER TABLE staff ADD COLUMN IF NOT EXISTS cal_color TEXT")
+        n = c.execute("UPDATE staff SET cal_color=%s WHERE id=%s", (color or None, staff_id)).rowcount
+    if not n:
+        raise HTTPException(404, "Staff not found")
+    return {"ok": True}
+
+
 # ---------- global quotes and jobs ----------
 @app.get("/api/quotes")
 def get_all_quotes(u: dict = Depends(current_user)):
