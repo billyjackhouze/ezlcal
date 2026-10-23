@@ -596,7 +596,7 @@ function teamItem(e){const n=e.att.length;return `<button class="ti" data-open="
 function weekStart(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-x.getDay());return x;}
 function calEvents(){return S.calWho<0?events():evFor('s',S.calWho);}
 function renderCal(main){
-  const _swc=i=>{if(i<0)return '#888';if(STF[i]&&STF[i][3])return STF[i][3];return _staffColorByName(STF[i]?STF[i][0]||'':'',i);};
+  const _swc=function(i){if(i<0)return '#888';if(STF[i]&&STF[i][3])return STF[i][3];var n=(STF[i]?STF[i][0]||'':'').toLowerCase();if(n.indexOf('tpalmer')>=0||n.indexOf('trey')>=0)return '#c62828';if(n.indexOf('tgreen')>=0||n.indexOf('tim')>=0)return '#2e7d32';if(n.indexOf('goodwin')>=0||n.indexOf('jesse')>=0)return '#6a1b9a';if(n.indexOf('jvela')>=0||n.indexOf('joey')>=0||n.indexOf('joseph')>=0)return '#e65100';return '#546e7a';};
   const _swn=S.calWho<0?'Everyone':esc(STF[S.calWho]?STF[S.calWho][0]:'');
   const _swdot=S.calWho<0?'':`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${_swc(S.calWho)};margin-right:5px;vertical-align:middle"></span>`;
   const who=`<div class="calwho-wrap" style="position:relative;display:inline-block">
@@ -940,16 +940,39 @@ async function setStaffColor(staffId,color){
   if(r&&r.ok)toast('Color saved');else toast('Failed to save');
 }
 function renderStaffColorPicker(el){
-  const PRESETS=['#c62828','#b71c1c','#e65100','#f57f17','#2e7d32','#1b5e20','#6a1b9a','#4a148c','#0277bd','#01579b','#00695c','#004d40','#37474f','#263238','#4e342e','#3e2723'];
   if(!el)return;
-  el.innerHTML='<table style="width:100%;border-collapse:collapse">'+
-    '<thead><tr><th style="text-align:left;font-size:12px;color:var(--sub);padding:4px 8px;font-weight:500">Name</th><th style="text-align:left;font-size:12px;color:var(--sub);padding:4px 8px;font-weight:500">Color</th><th style="text-align:left;font-size:12px;color:var(--sub);padding:4px 8px;font-weight:500">Presets</th></tr></thead><tbody>'+
-    STF.map((s,i)=>{if(!s)return '';const cur=s[3]||_swc(i);return '<tr><td style="padding:6px 8px;font-size:13px">'+esc(s[0])+'</td>'+
-      '<td style="padding:6px 8px"><div style="display:flex;gap:6px;align-items:center">'+
-      '<input type="color" value="'+cur+'" id="scc_'+i+'" onchange="STF['+i+'][3]=this.value;document.getElementById('scd_'+i+'').style.background=this.value;setStaffColor('+JSON.stringify(s[2])+',this.value)" style="width:36px;height:28px;border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:2px">'+
-      '<span id="scd_'+i+'" style="display:inline-block;width:22px;height:22px;border-radius:50%;background:'+cur+'"></span></div></td>'+
-      '<td style="padding:6px 8px"><div style="display:flex;gap:3px;flex-wrap:wrap">'+PRESETS.map(c=>'<button onclick="STF['+i+'][3]=''+c+'';document.getElementById('scc_'+i+'').value=''+c+'';document.getElementById('scd_'+i+'').style.background=''+c+'';setStaffColor('+JSON.stringify(s[2])+',''+c+'')" style="width:18px;height:18px;border-radius:50%;background:'+c+';border:2px solid '+(cur===c?'#000':'transparent')+';cursor:pointer;padding:0"></button>').join('')+'</div></td></tr>';}).join('')+
-    '</tbody></table>';
+  var P=["#c62828","#b71c1c","#6a1b9a","#4a148c","#e65100","#f57f17","#2e7d32","#1b5e20","#0277bd","#01579b","#00695c","#004d40","#37474f","#263238"];
+  var rows="";
+  for(var i=0;i<STF.length;i++){
+    var s=STF[i]; if(!s)continue;
+    var cur=s[3]||_swc(i);
+    var btns="";
+    for(var p=0;p<P.length;p++){
+      var c=P[p];
+      btns+="<button data-c="+c+" onclick=\"pickStaffColor("+i+",this.dataset.c)\" style=\"width:18px;height:18px;border-radius:50%;background:"+c+";border:2px solid "+(cur===c?"#000":"transparent")+";cursor:pointer;padding:0\"></button>";
+    }
+    rows+="<tr>"
+      +"<td style=\"padding:6px 8px;font-size:13px\">"+esc(s[0])+"</td>"
+      +"<td style=\"padding:6px 8px\"><div style=\"display:flex;gap:6px;align-items:center\">"
+      +"<input type=color value="+cur+" id=scc"+i+" onchange=\"pickStaffColor("+i+",this.value)\" style=\"width:36px;height:28px;border:1px solid var(--border);border-radius:4px;cursor:pointer\">"
+      +"<span id=scd"+i+" style=\"display:inline-block;width:22px;height:22px;border-radius:50%;background:"+cur+"\"></span>"
+      +"</div></td>"
+      +"<td style=\"padding:6px 8px\"><div style=\"display:flex;gap:3px;flex-wrap:wrap\">"+btns+"</div></td></tr>";
+  }
+  el.innerHTML="<table style=\"width:100%;border-collapse:collapse\"><thead><tr>"
+    +"<th style=\"text-align:left;font-size:12px;color:var(--sub);padding:4px 8px\">Name</th>"
+    +"<th style=\"text-align:left;font-size:12px;color:var(--sub);padding:4px 8px\">Color</th>"
+    +"<th style=\"text-align:left;font-size:12px;color:var(--sub);padding:4px 8px\">Presets</th>"
+    +"</tr></thead><tbody>"+rows+"</tbody></table>";
+}
+function pickStaffColor(si,color){
+  if(!STF[si])return;
+  STF[si][3]=color;
+  var inp=document.getElementById("scc"+si);
+  var dot=document.getElementById("scd"+si);
+  if(inp)inp.value=color;
+  if(dot)dot.style.background=color;
+  setStaffColor(STF[si][2],color);
 }
 /* ---------- admin ---------- */
 let ADM=null, admBusy=false;
