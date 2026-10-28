@@ -1,53 +1,68 @@
-﻿import psycopg, os
+import psycopg, os, sys
 from dotenv import load_dotenv
 from pathlib import Path
 load_dotenv(Path(r"C:\Apps\ezlcal\backend\.env"))
+DB = os.environ["DATABASE_URL"]
 
-with psycopg.connect(os.environ["DATABASE_URL"], row_factory=psycopg.rows.dict_row) as c:
-    cur = c.cursor()
-    cur.execute("DELETE FROM account_offices WHERE office_type = %s", ("Billing",))
-    deleted = cur.rowcount
-    print(f"Cleared {deleted} existing billing offices")
+def run(dry_run=False):
+    with psycopg.connect(DB, row_factory=psycopg.rows.dict_row) as conn:
+        cur = conn.cursor()
+        cur.execute("ALTER TABLE account_offices ADD COLUMN IF NOT EXISTS contact_id TEXT")
 
-    cur.execute("""
-        INSERT INTO account_offices (id, account_id, office_type, address, city, state, zip, deleted)
-        SELECT
-            gen_random_uuid()::text,
-            account_id,
-            'Billing',
-            billing_address,
-            billing_city,
-            billing_state,
-            billing_zip,
-            false
-        FROM (
-            SELECT DISTINCT
-                account_id,
-                trim(billing_address) AS billing_address,
-                trim(billing_city)    AS billing_city,
-                trim(billing_state)   AS billing_state,
-                trim(billing_zip)     AS billing_zip
+        # Pass 1: one Company address per account (most recent job)
+        cur.execute("DELETE FROM account_offices WHERE office_type = %s AND source = %s", ("Company","fm"))
+        d1 = cur.rowcount
+        cur.execute("""
+            INSERT INTO account_offices
+                (id, account_id, office_type, address, city, state, zip, notes, deleted, source, updated_at)
+            SELECT DISTINCT ON (account_id)
+                gen_random_uuid()::text, account_id, 'Company',
+                trim(billing_address), trim(billing_city), trim(billing_state), trim(billing_zip),
+                'Last job: ' || coalesce(job_number::text,''),
+                false, 'fm', now()
             FROM account_quotes
-            WHERE billing_address IS NOT NULL AND trim(billing_address) != ''
-              AND billing_city    IS NOT NULL AND trim(billing_city)    != ''
+            WHERE trim(coalesce(billing_address,'')) != ''
+              AND trim(coalesce(billing_city,'')) != ''
               AND account_id IS NOT NULL
-        ) uniq
-    """)
-    inserted = cur.rowcount
-    c.commit()
+            ORDER BY account_id, coalesce(job_date, quote_date) DESC NULLS LAST
+        """)
+        i1 = cur.rowcount
 
-    total = c.execute("SELECT count(*) FROM account_offices").fetchone()["count"]
-    with_addr = c.execute(
-        "SELECT count(*) FROM account_offices WHERE address IS NOT NULL AND address != '' AND NOT deleted"
-    ).fetchone()["count"]
-    print(f"Inserted: {inserted} unique billing addresses")
-    print(f"Total offices: {total}")
-    print(f"Visible (not deleted): {with_addr}")
-    print()
-    rows = c.execute(
-        "SELECT a.name, count(*) as cnt FROM account_offices o"
-        " JOIN accounts a ON a.id = o.account_id"
-        " WHERE NOT o.deleted GROUP BY a.name ORDER BY cnt DESC LIMIT 10"
-    ).fetchall()
-    print("Accounts with most addresses:")
-    for r in rows: print(f"  {r['name']}: {r['cnt']}")
+        # Pass 2: one Buyer address per buyer per account (most recent job)
+        cur.execute("DELETE FROM account_offices WHERE office_type = %s AND source = %s", ("Buyer","fm"))
+        d2 = cur.rowcount
+        cur.execute("""
+            INSERT INTO account_offices
+                (id, account_id, contact_id, office_type, address, city, state, zip, notes, deleted, source, updated_at)
+            SELECT DISTINCT ON (q.account_id, upper(trim(q.buyer_name)))
+                gen_random_uuid()::text, q.account_id, ct.id, 'Buyer',
+                trim(q.billing_address), trim(q.billing_city), trim(q.billing_state), trim(q.billing_zip),
+                trim(q.buyer_name),
+                false, 'fm', now()
+            FROM account_quotes q
+            LEFT JOIN contacts ct ON upper(trim(ct.name)) = upper(trim(q.buyer_name))
+            WHERE trim(coalesce(q.billing_address,'')) != ''
+              AND trim(coalesce(q.billing_city,'')) != ''
+              AND trim(coalesce(q.buyer_name,'')) != ''
+              AND q.account_id IS NOT NULL
+            ORDER BY q.account_id, upper(trim(q.buyer_name)),
+                     coalesce(q.job_date, q.quote_date) DESC NULLS LAST
+        """)
+        i2 = cur.rowcount
+
+        if dry_run:
+            conn.rollback()
+            print(f"DRY RUN: {i1} company, {i2} buyer addresses")
+            return
+
+        conn.commit()
+        print(f"Company:  cleared {d1}, inserted {i1}")
+        print(f"Buyer:    cleared {d2}, inserted {i2}")
+        rows = cur.execute("""
+            SELECT office_type, count(*) n FROM account_offices
+            WHERE NOT deleted AND source='fm' GROUP BY office_type
+        """).fetchall()
+        for r in rows: print(f"  {r['office_type']}: {r['n']}")
+
+if __name__ == "__main__":
+    run(dry_run="--dry" in sys.argv)

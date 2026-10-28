@@ -1,4 +1,4 @@
-﻿import csv, os, time, urllib.parse, urllib.request
+import csv, os, time, urllib.request
 import psycopg
 from psycopg.rows import dict_row
 from dotenv import load_dotenv
@@ -7,12 +7,13 @@ from pathlib import Path
 load_dotenv(Path(r"C:\Apps\ezlcal\backend\.env"))
 DB = os.environ["DATABASE_URL"]
 URL = "https://geocoding.geo.census.gov/geocoder/locations/addressbatch"
+CHUNK = 2000
 
 def census_batch(rows):
     lines = ["Unique ID,Street address,City,State,ZIP"]
     for oid, addr, city, state, zip_ in rows:
         addr  = (addr  or "").replace(",","").replace('"',"").replace("\r","").replace("\n","")[:100]
-        city  = (city  or "").replace(",","").replace('"',"").replace("\r","").replace("\n","")[:50]
+        city  = (city  or "").replace(",","").replace('"',"")[:50]
         state = (state or "").replace(",","").replace('"',"")[:2]
         zip_  = (zip_  or "").replace(",","").replace('"',"")[:10]
         if city and state:
@@ -30,7 +31,7 @@ def census_batch(rows):
                  "User-Agent": "ezlcal/1.0"}, method="POST")
     results = {}
     try:
-        with urllib.request.urlopen(req, timeout=180) as r:
+        with urllib.request.urlopen(req, timeout=120) as r:
             text = r.read().decode("utf-8", errors="replace")
         for line in text.splitlines():
             p = next(csv.reader([line]))
@@ -44,27 +45,29 @@ def census_batch(rows):
                     except ValueError: pass
     except Exception as e:
         print(f"  error: {e}", flush=True)
-        return None  # signal failure
+        return None
     return results
 
 with psycopg.connect(DB, row_factory=dict_row) as c:
     pending = c.execute("""
         SELECT id, address, city, state, zip FROM account_offices
-        WHERE NOT deleted AND lat IS NULL AND geocoded_at IS NULL
+        WHERE NOT deleted AND lat IS NULL
           AND trim(coalesce(city,'')) != ''
+        ORDER BY office_type, city
     """).fetchall()
 
-print(f"Remaining: {len(pending)}", flush=True)
-CHUNK = 2000
+print(f"Pending: {len(pending)}", flush=True)
 total_ok = total_fail = 0
 
 for start in range(0, len(pending), CHUNK):
     chunk = pending[start:start+CHUNK]
     rows = [(r["id"],r["address"],r["city"],r["state"],r["zip"]) for r in chunk]
-    print(f"Chunk {start//CHUNK+1}/{(len(pending)+CHUNK-1)//CHUNK}: {len(rows)} addresses...", flush=True)
+    batch_num = start//CHUNK+1
+    total_batches = (len(pending)+CHUNK-1)//CHUNK
+    print(f"Batch {batch_num}/{total_batches}: {len(rows)} addresses...", flush=True)
     matches = census_batch(rows)
     if matches is None:
-        print(f"  Batch failed, marking as skipped", flush=True)
+        print(f"  Batch failed, marking skipped", flush=True)
         with psycopg.connect(DB, row_factory=dict_row) as c:
             for r in chunk:
                 c.execute("UPDATE account_offices SET geocoded_at=now() WHERE id=%s",(r["id"],))
@@ -74,18 +77,17 @@ for start in range(0, len(pending), CHUNK):
     print(f"  Matched: {len(matches)}/{len(rows)}", flush=True)
     with psycopg.connect(DB, row_factory=dict_row) as c:
         for r in chunk:
-            oid = r["id"]
-            if oid in matches:
-                lat, lng = matches[oid]
-                c.execute("UPDATE account_offices SET lat=%s,lng=%s,geocoded_at=now() WHERE id=%s",(lat,lng,oid))
+            if r["id"] in matches:
+                lat, lng = matches[r["id"]]
+                c.execute("UPDATE account_offices SET lat=%s,lng=%s,geocoded_at=now() WHERE id=%s",(lat,lng,r["id"]))
                 total_ok += 1
             else:
-                c.execute("UPDATE account_offices SET geocoded_at=now() WHERE id=%s",(oid,))
+                c.execute("UPDATE account_offices SET geocoded_at=now() WHERE id=%s",(r["id"],))
                 total_fail += 1
         c.commit()
     print(f"  Running: {total_ok} geocoded", flush=True)
     time.sleep(1)
 
 with psycopg.connect(DB, row_factory=dict_row) as c:
-    n = c.execute("SELECT count(*) FROM account_offices WHERE lat IS NOT NULL").fetchone()["count"]
-print(f"\nDone. {total_ok} new geocoded. Total with coords: {n}", flush=True)
+    n = c.execute("SELECT count(*) n FROM account_offices WHERE lat IS NOT NULL").fetchone()["n"]
+print(f"\nDone. {total_ok} geocoded, {total_fail} unmatched. Total with coords: {n}", flush=True)
