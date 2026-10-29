@@ -262,7 +262,7 @@ async function start(){
     staff:boot.staff.map(s=>[s[1],s[2]||'',s[0]||'',s[3]||'']),
     events:Object.values(raw).map(fromServer)
   };
-  window.__IX=IX;
+  window.__IX=IX;window.__K=K;
   window.__ezl={api,fromServer,toServer,signOut,user,akey:i=>K.a[i],_qcache:{},_jcache:{},
     patchBootOffice(row,deleted){const b=g(B,null);if(!b)return;b.offices=(b.offices||[]).filter(o=>o[0]!==row[0]);if(!deleted)b.offices.push(row);p(B,b);},meIdx:user.staff_id&&IX.s.has(user.staff_id)?IX.s.get(user.staff_id):-1,
     cacheRaw(list){const r=g(EV,{});list.forEach(e=>r[e.id]=e);p(EV,r);},
@@ -390,7 +390,7 @@ function applyTheme(){ if(theme)document.documentElement.dataset.theme=theme; el
 applyTheme();
 function go(view,kind,i){S.view=view; if(kind)S.sel[kind]=i; render(); const m=$('main'); if(m)m.scrollTop=0;}
 window.__go=go;
-function loadQuotesJobs(acctIdx){
+function loadContactQJ(conIdx){var _K=typeof K!=='undefined'?K:window.__K;var cid=_K&&_K.c?_K.c[conIdx]:null;if(!cid)return;['q','j'].forEach(function(t){var box=document.getElementById(t==='q'?'cqbox_'+conIdx:'cjbox_'+conIdx);if(!box)return;console.log('ContactQJ call',cid,t);EZ.api('/contacts/'+encodeURIComponent(cid)+'/'+(t==='q'?'quotes':'jobs')).then(function(r){console.log('ContactQJ resp',t,r&&r.status);if(!r||!r.ok){var b=box.querySelector('.collapsible-body');if(b)b.innerHTML='<div style="padding:10px 14px" class="muted">Could not load</div>';return;}return r.json().then(function(data){renderQJBox(box,data,t==='q');});}).catch(function(){});});}function loadQuotesJobs(acctIdx){
   const aid=EZ.akey(acctIdx);
   if(!aid)return;
   ['q','j'].forEach(t=>{
@@ -682,7 +682,7 @@ function renderEntity(main,k){
   main.className='split'+(sel>=0?' has':'');
   main.innerHTML=`<section class="listpane" aria-label="List"><div class="listhead"><input class="search" id="q" type="search" placeholder="${ph}" value="${esc(S.q[k])}" aria-label="${ph}">${k==='a'?'<button class="btn" id="qadd" style="flex:0 0 auto">+ Company</button>':k==='c'?'<button class="btn" id="qadd" style="flex:0 0 auto">+ Contact</button>':''}</div><div class="list">${rows||'<div class="empty">No matches</div>'}</div></section>
     ${sel>=0?detailHtml(k,sel):'<section class="detail"><div class="empty">Pick a record on the left.</div></section>'}`;
-  if(k==='a'&&sel>=0)requestAnimationFrame(()=>requestAnimationFrame(()=>loadQuotesJobs(sel)));
+  if(k==='a'&&sel>=0)requestAnimationFrame(()=>requestAnimationFrame(()=>loadQuotesJobs(sel)));if(k==='c'&&sel>=0)requestAnimationFrame(()=>requestAnimationFrame(()=>loadContactQJ(sel)));
   const qi=$('#q');const qadd=$('#qadd');if(qadd)qadd.onclick=()=>{if(k==='a')openNewAccount();else openNewContact(-1);};qi.oninput=e=>{S.q[k]=e.target.value;const pos=e.target.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(pos,pos);};
 }
 function detailHtml(k,i){
@@ -736,7 +736,7 @@ function detailHtml(k,i){
       <dt>appointments</dt><dd>${evs.length}</dd></dl>
       ${accts.length?`<div class="box"><div class="boxhead"><b>Accounts</b><span class="muted">${accts.length}</span><span class="spacer"></span><span class="muted" style="font-size:12px;width:86px;text-align:right">Sales YTD</span><span class="muted" style="font-size:12px;width:86px;text-align:right">Prior yr</span></div>
         ${accts.map(a=>{const L=linkBy[a+':'+i];return `<div class="frow"><button class="linkbtn" data-goto="a:${a}" style="flex:1;min-width:0">${esc(ACC[a][0])}${a===c[1]?' <span class="muted">(current)</span>':''}</button><span class="num" style="width:86px">${L&&L[2]?money(L[2]):'—'}</span><span class="num" style="width:86px">${L&&L[3]?money(L[3]):'—'}</span></div>`;}).join('')}</div>`:''}
-      </section><aside class="activity pane"><b>All activity</b>${timeline(evs)}</aside>`;
+      <div class="box" id="cqbox_${i}"><div class="boxhead collapsible" data-toggle="cqbox_${i}"><b>Quotes</b><span class="spacer"></span><span class="collapse-chevron">&#9662;</span></div><div class="collapsible-body empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div><div class="box" id="cjbox_${i}"><div class="boxhead collapsible" data-toggle="cjbox_${i}"><b>Jobs</b><span class="spacer"></span><span class="collapse-chevron">&#9662;</span></div><div class="collapsible-body empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div></section><aside class="activity pane"><b>All activity</b>${timeline(evs)}</aside>`;
   }
   const s=STF[i];const evs=evFor('s',i);const up=evs.filter(e=>e.date>=TODAY).length;
   const acctCount=new Set();evs.forEach(e=>e.att.forEach(([t,x])=>{if(t==='a')acctCount.add(x);}));
