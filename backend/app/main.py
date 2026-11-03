@@ -94,7 +94,7 @@ def change_password(body: PasswordIn, u: dict = Depends(current_user)):
 
 
 def _public(u: dict) -> dict:
-    return {k: u[k] for k in ("username", "staff_id", "display_name", "must_change", "is_admin")}
+    return {k: u[k] for k in ("username", "staff_id", "display_name", "must_change", "is_admin", "default_tab", "cal_default")}
 
 
 # ---------- reference data ----------
@@ -455,6 +455,19 @@ def get_contact_jobs(contact_id: str, u: dict = Depends(current_user)):
     return {"rows":[dict(r) for r in rows],
             "totals":{str(int(t["yr"])):float(t["total"] or 0) for t in totals if t["yr"]}}
 
+
+@app.put("/api/admin/users/{username}/prefs")
+def set_user_prefs(username: str, body: dict, u: dict = Depends(current_user)):
+    if not u.get('is_admin'): raise HTTPException(403, 'Admin only')
+    allowed = {'default_tab', 'cal_default'}
+    updates = {k: v for k, v in body.items() if k in allowed}
+    if not updates: raise HTTPException(400, 'No valid fields')
+    with pool.connection() as c:
+        for k, v in updates.items():
+            c.execute(f'UPDATE app_users SET {k}=%s WHERE username=%s', (v, username))
+        c.commit()
+    return {'ok': True}
+
 # ---------- global quotes and jobs ----------
 @app.get("/api/quotes")
 def get_all_quotes(u: dict = Depends(current_user)):
@@ -562,7 +575,8 @@ def admin_list(u: dict = Depends(admin_user)):
     with pool.connection() as c:
         users = c.execute(
             """SELECT a.username, a.display_name, a.staff_id, s.name AS staff_name, a.is_admin, a.disabled,
-                      a.must_change, a.created_at, a.last_login, a.created_by
+                      a.must_change, a.created_at, a.last_login, a.created_by,
+                      coalesce(a.default_tab,'cal') as default_tab, coalesce(a.cal_default,true) as cal_default
                FROM app_users a LEFT JOIN staff s ON s.id = a.staff_id ORDER BY a.display_name"""
         ).fetchall()
         staff = c.execute("SELECT id, name, dept, active FROM staff ORDER BY name").fetchall()

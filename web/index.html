@@ -384,7 +384,7 @@ function evFor(kind,i,withFamily){
 }
 
 /* ---------- state + routing ---------- */
-const _savedWho=localStorage.getItem('ezl_calWho');const _initWho=_savedWho!==null?+_savedWho:(EZ.meIdx>=0?EZ.meIdx:-1);const S={view:'team',calMode:'week',calDate:new Date(),calWho:_initWho,sel:{a:-1,c:-1,s:-1},q:{a:'',c:'',s:''},fam:true,teamWho:STF.map((s,i)=>i).filter(i=>/Outside Sales|Owner/.test(STF[i][1])||i===EZ.meIdx),modal:null};
+const _savedWho=localStorage.getItem('ezl_calWho');const _initWho=_savedWho!==null?+_savedWho:(EZ.meIdx>=0?EZ.meIdx:-1);const _defTab=EZ.user.default_tab||'cal';const S={view:_defTab,calMode:'week',calDate:new Date(),calWho:_initWho,sel:{a:-1,c:-1,s:-1},q:{a:'',c:'',s:''},fam:true,teamWho:STF.map((s,i)=>i).filter(i=>/Outside Sales|Owner/.test(STF[i][1])||i===EZ.meIdx),modal:null};
 let theme=ls.get(LS_THEME,'');
 function applyTheme(){ if(theme)document.documentElement.dataset.theme=theme; else delete document.documentElement.dataset.theme; }
 applyTheme();
@@ -1003,11 +1003,11 @@ function renderAdmin(main){
     <span class="muted">${ADM.users.filter(u=>!u.disabled).length} active of ${ADM.users.length}</span><button class="btn primary" data-adm="new">+ Add person</button></div>
     <div style="overflow-x:auto"><table><thead><tr><th>Name</th><th>Username</th><th>Staff record (calendar)</th><th>Access</th><th>Last sign-in</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
     <p class="muted" style="font-size:12px;margin-top:14px">Turning someone off signs them out everywhere and blocks sign-in; their appointments and history stay. A staff record is what puts a person on the Team view and in the invitee list.</p></div>
-  <div class="box" style="margin-top:16px"><div class="boxhead"><b>Staff Calendar Colors</b></div><div id="staff-color-picker" style="padding:10px 14px"></div></div>`;
+  <div class="box" style="margin-top:16px"><div class="boxhead"><b>Staff Calendar Colors</b></div><div id="staff-color-picker" style="padding:10px 14px"></div></div><div class="box" style="margin-top:16px"><div class="boxhead"><b>User Preferences</b><span class="muted" style="font-size:12px;margin-left:8px">Default tab and calendar view on login</span></div><div id="user-prefs-panel" style="overflow-x:auto"></div></div>`;
   wireAdmin(main);
-  requestAnimationFrame(()=>{const el=document.getElementById('staff-color-picker');if(el)renderStaffColorPicker(el);});
+  requestAnimationFrame(()=>{const el=document.getElementById('staff-color-picker');if(el)renderStaffColorPicker(el);});requestAnimationFrame(()=>renderUserPrefs(main,ADM));
 }
-async function admCall(path,opt,okMsg){
+function renderUserPrefs(main,adm){var el=document.getElementById('user-prefs-panel');if(!el)return;var TABS=[['cal','Calendar'],['a','Accounts'],['c','Contacts'],['s','Staff'],['quotes','Quotes'],['jobs','Jobs'],['map','Map'],['team','Team']];var rows=(adm.users||[]).filter(function(u){return !u.disabled;}).map(function(u){var dt=u.default_tab||'cal';var cd=u.cal_default!==false;var opts=TABS.map(function(t){return '<option value="'+t[0]+'"'+(dt===t[0]?' selected':'')+'>'+t[1]+'</option>';}).join('');return '<tr><td style="padding:7px 12px;font-size:13px"><b>'+esc(u.display_name)+'</b></td>'+'<td style="padding:7px 12px"><select style="font-size:12px" onchange="saveUserPref(\''+esc(u.username)+'\',\'default_tab\',this.value)">'+opts+'</select></td>'+'<td style="padding:7px 12px"><label style="display:flex;gap:8px;align-items:center;font-size:12px;cursor:pointer"><input type="checkbox"'+(cd?' checked':'')+' onchange="saveUserPref(\''+esc(u.username)+'\',\'cal_default\',this.checked)">Default to own calendar</label></td></tr>';}).join('');el.innerHTML='<table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;font-size:12px;color:var(--sub);padding:4px 12px">User</th><th style="text-align:left;font-size:12px;color:var(--sub);padding:4px 12px">Default tab</th><th style="text-align:left;font-size:12px;color:var(--sub);padding:4px 12px">Calendar</th></tr></thead><tbody>'+rows+'</tbody></table>';}async function saveUserPref(username,key,val){await admCall('/admin/users/'+encodeURIComponent(username)+'/prefs',{method:'PUT',body:JSON.stringify({[key]:val})},'Saved');}async function admCall(path,opt,okMsg){
   try{const r=await EZ.api(path,opt);const j=await r.json().catch(()=>({}));
     if(!r.ok){toast(typeof j.detail==='string'?j.detail:'That did not work');return null;}
     if(okMsg)toast(okMsg);return j;}
