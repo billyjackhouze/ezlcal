@@ -613,7 +613,7 @@ function renderCal(main){
     title=days[0].toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+days[6].toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
     const evs=calEvents();const H0=6,H1=21;
     let g=`<div class="wgrid"><div class="whead"></div>${days.map(d=>`<div class="whead ${iso(d)===TODAY?'today':''}">${d.toLocaleDateString('en-US',{weekday:'short'})} ${d.getDate()}</div>`).join('')}`;
-    g+=`<div class="allday muted" style="font-size:11px;text-align:right;padding-right:6px;border-left:0">all-day</div>`+days.map(d=>{const ds=iso(d);return `<div class="allday">${evs.filter(e=>e.date<=ds&&(e.endDate||e.date)>=ds&&!e.time).map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${staffColor(e)}">${esc(e.title)}</button>`).join('')}</div>`;}).join('');
+    g+=`<div class="allday muted" style="font-size:11px;text-align:right;padding-right:6px;border-left:0">all-day</div>`+days.map(d=>{const ds=iso(d);return `<div class="allday">${evs.filter(e=>e.date<=ds&&(e.endDate||e.date)>=ds&&(!e.time||e.endDate>e.date)).map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${staffColor(e)}">${esc(e.title)}</button>`).join('')}</div>`;}).join('');
     g+=`<div>${[...Array(H1-H0)].map((_,k)=>`<div class="hcell">${fmtTime(pad(H0+k)+':00').replace(':00','')}</div>`).join('')}</div>`;
     g+=days.map(d=>{const ds=iso(d);const timed=evs.filter(e=>e.date===ds&&e.time);
       const lanes=[];timed.forEach(e=>{const s=toMin(e.time),en=e.end?toMin(e.end):s+60;let L=0;while(lanes[L]&&lanes[L]>s)L++;lanes[L]=en;e._l=L;});
