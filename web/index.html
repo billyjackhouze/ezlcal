@@ -252,8 +252,8 @@ async function start(){
   const K={a:boot.accounts.map(a=>a[0]),c:boot.contacts.map(c=>c[0]),s:boot.staff.map(s=>s[0])};
   const IX={a:new Map(K.a.map((k,i)=>[k,i])),c:new Map(K.c.map((k,i)=>[k,i])),s:new Map(K.s.map((k,i)=>[k,i]))};
   const toIdx=att=>(att||[]).map(([t,k])=>[t,IX[t]?IX[t].get(String(k)):undefined]).filter(x=>x[1]!==undefined);
-  const fromServer=e=>({id:e.id,title:e.title,date:e.date,time:e.time||'',end:e.end||'',allDay:!e.time,cat:e.cat||'',loc:e.loc||'',notes:e.notes||'',deleted:!!e.deleted,att:toIdx(e.att),updatedAt:e.updatedAt,updatedBy:e.updatedBy,createdBy:e.createdBy||''});
-  const toServer=e=>({id:e.id,title:e.title,date:e.date,time:e.time||'',end:e.end||'',cat:e.cat||'',loc:e.loc||'',notes:e.notes||'',deleted:!!e.deleted,updatedAt:e.updatedAt,att:(e.att||[]).map(([t,i])=>[t,K[t][i]])});
+  const fromServer=e=>({id:e.id,title:e.title,date:e.date,time:e.time||'',end:e.end||'',endDate:e.endDate||'',allDay:!e.time,cat:e.cat||'',loc:e.loc||'',notes:e.notes||'',deleted:!!e.deleted,att:toIdx(e.att),updatedAt:e.updatedAt,updatedBy:e.updatedBy,createdBy:e.createdBy||''});
+  const toServer=e=>({id:e.id,title:e.title,date:e.date,time:e.time||'',end:e.end||'',endDate:e.endDate||'',cat:e.cat||'',loc:e.loc||'',notes:e.notes||'',deleted:!!e.deleted,updatedAt:e.updatedAt,att:(e.att||[]).map(([t,i])=>[t,K[t][i]])});
   const D={
     accounts:boot.accounts.map(a=>[a[1],a[2]||'',a[3]!=null&&IX.a.has(a[3])?IX.a.get(a[3]):-1,a[4]!=null&&IX.a.has(a[4])?IX.a.get(a[4]):-1,a[5]||0,a[6]||0,a[7]||0,a[8]||'',a[9]||'',a[10]||'',a[11]||'',a[12]||'',a[13]||'']),
     contacts:boot.contacts.map(c=>[c[1],c[2]!=null&&IX.a.has(c[2])?IX.a.get(c[2]):-1,c[3]||'',c[4]||'',c[5]||'',c[6]||'',c[7]||'',c[8]||'',c[9]||'',c[10]||'',c[11]||'',!!c[12],c[13]!==false]),
@@ -323,7 +323,7 @@ const ls={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;
 let remote={};                            // id -> newer server copies pulled since load
 let outbox=ls.get(LS_OUT,[]);             // [{id,body}] waiting to sync
 let dbState=navigator.onLine?'live':'local', syncing=false;
-const seedById={}; D.events.forEach(e=>{e.end=e.end||'';e.allDay=!e.time;seedById[e.id]=e;});
+const seedById={}; D.events.forEach(e=>{e.end=e.end||'';e.endDate=e.endDate||'';e.allDay=!e.time;seedById[e.id]=e;});
 function allEvents(){
   const m=Object.assign({},seedById);
   for(const id in remote) m[id]=remote[id];
@@ -613,7 +613,7 @@ function renderCal(main){
     title=days[0].toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+days[6].toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
     const evs=calEvents();const H0=6,H1=21;
     let g=`<div class="wgrid"><div class="whead"></div>${days.map(d=>`<div class="whead ${iso(d)===TODAY?'today':''}">${d.toLocaleDateString('en-US',{weekday:'short'})} ${d.getDate()}</div>`).join('')}`;
-    g+=`<div class="allday muted" style="font-size:11px;text-align:right;padding-right:6px;border-left:0">all-day</div>`+days.map(d=>{const ds=iso(d);return `<div class="allday">${evs.filter(e=>e.date===ds&&!e.time).map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${staffColor(e)}">${esc(e.title)}</button>`).join('')}</div>`;}).join('');
+    g+=`<div class="allday muted" style="font-size:11px;text-align:right;padding-right:6px;border-left:0">all-day</div>`+days.map(d=>{const ds=iso(d);return `<div class="allday">${evs.filter(e=>e.date<=ds&&(e.endDate||e.date)>=ds&&!e.time).map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${staffColor(e)}">${esc(e.title)}</button>`).join('')}</div>`;}).join('');
     g+=`<div>${[...Array(H1-H0)].map((_,k)=>`<div class="hcell">${fmtTime(pad(H0+k)+':00').replace(':00','')}</div>`).join('')}</div>`;
     g+=days.map(d=>{const ds=iso(d);const timed=evs.filter(e=>e.date===ds&&e.time);
       const lanes=[];timed.forEach(e=>{const s=toMin(e.time),en=e.end?toMin(e.end):s+60;let L=0;while(lanes[L]&&lanes[L]>s)L++;lanes[L]=en;e._l=L;});
@@ -626,7 +626,7 @@ function renderCal(main){
   } else if(S.calMode==='month'){
     const f=new Date(S.calDate.getFullYear(),S.calDate.getMonth(),1);const st=weekStart(f);title=f.toLocaleDateString('en-US',{month:'long',year:'numeric'});
     const evs=calEvents();
-    body=`<div class="month">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div class="whead" style="position:static">${d}</div>`).join('')}${[...Array(42)].map((_,k)=>{const d=addDays(st,k),ds=iso(d);const es=evs.filter(e=>e.date===ds);
+    body=`<div class="month">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div class="whead" style="position:static">${d}</div>`).join('')}${[...Array(42)].map((_,k)=>{const d=addDays(st,k),ds=iso(d);const es=evs.filter(e=>e.date<=ds&&(e.endDate||e.date)>=ds);
       return `<div class="mcell ${d.getMonth()!==f.getMonth()?'out':''} ${ds===TODAY?'today':''}"><div class="n"><button class="more" data-slot="${ds}|" aria-label="New appointment on ${ds}">${d.getDate()}</button></div>${es.slice(0,3).map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${staffColor(e)}">${e.time?fmtTime(e.time).replace(':00','')+' ':''}${esc(e.title)}</button>`).join('')}${es.length>3?`<button class="more" data-calmode="list">+${es.length-3} more</button>`:''}</div>`;}).join('')}</div>`;
   } else {
     title='Upcoming';const evs=calEvents().filter(e=>e.date>=iso(addDays(new Date(),-30)));
@@ -1106,7 +1106,7 @@ function renderModal(){
       ${!navigator.onLine?'<div style="padding:9px 16px;background:var(--warnBg);color:var(--warnFg)">No connection. This saves on this device and syncs when you are back online.</div>':''}
       <div class="form">
         <label class="l" for="f_title">Title</label><input type="text" id="f_title" value="${esc(e.title)}" placeholder="e.g. Lunch with Kinder Morgan engineering">
-        <label class="l" for="f_date">When</label><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><input type="date" id="f_date" value="${e.date}"><input type="time" id="f_time" value="${e.time||''}" aria-label="Start time" ${e.time?'':'disabled'}><span class="muted">to</span><input type="time" id="f_end" value="${e.end||''}" aria-label="End time" ${e.time?'':'disabled'}><label class="muted" style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="f_all" ${e.time?'':'checked'}>All-day</label></div>
+        <label class="l" for="f_date">When</label><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><input type="date" id="f_date" value="${e.date}"><input type="time" id="f_time" value="${e.time||''}" aria-label="Start time" ${e.time?'':'disabled'}><span class="muted">to</span><input type="time" id="f_end" value="${e.end||''}" aria-label="End time" ${e.time?'':'disabled'}><input type="date" id="f_end_date" value="${e.endDate||''}" title="End date" aria-label="End date" style="margin-left:4px"><label class="muted" style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="f_all" ${e.time?'':'checked'}>All-day</label></div>
         <label class="l" for="f_cat">Category</label><select id="f_cat">${CATS.map(c=>`<option ${c===e.cat?'selected':''}>${c}</option>`).join('')}</select>
         <label class="l" for="f_loc">Location</label><input type="text" id="f_loc" value="${esc(e.loc)}" placeholder="Restaurant, site or address">
         <label class="l" for="f_inv" style="align-self:start;padding-top:7px">Invite</label>
@@ -1116,7 +1116,7 @@ function renderModal(){
         <label class="l" for="f_notes" style="align-self:start;padding-top:7px">Notes</label><textarea id="f_notes" rows="5" placeholder="Call report: who you met, what they're working on, next step">${esc(e.notes)}</textarea>
       </div>
       <div class="foot"><button class="btn" id="m_cancel">Cancel</button><button class="btn primary" id="m_save">${navigator.onLine?'Save appointment':'Save to this device'}</button></div></div></div>`;
-    const sync=()=>{e.title=$('#f_title').value;e.date=$('#f_date').value;const all=$('#f_all').checked;e.time=all?'':($('#f_time').value||'09:00');e.end=all?'':$('#f_end').value;e.cat=$('#f_cat').value;e.loc=$('#f_loc').value;e.notes=$('#f_notes').value;};
+    const sync=()=>{e.title=$('#f_title').value;e.date=$('#f_date').value;const all=$('#f_all').checked;e.time=all?'':($('#f_time').value||'09:00');e.end=all?'':$('#f_end').value;e.endDate=(function(){var d=$('#f_end_date');return d?d.value||'':'';})();e.cat=$('#f_cat').value;e.loc=$('#f_loc').value;e.notes=$('#f_notes').value;};
     $('#m_x').onclick=closeModal;$('#m_cancel').onclick=closeModal;
     $('#f_all').onchange=()=>{sync();if(!$('#f_all').checked&&!e.time)e.time='09:00';renderModal();};
     m.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{sync();const [t,i]=b.dataset.rm.split(':');e.att=e.att.filter(x=>!(x[0]===t&&x[1]===+i));renderModal();$('#f_inv').focus();});

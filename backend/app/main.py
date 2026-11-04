@@ -94,7 +94,7 @@ def change_password(body: PasswordIn, u: dict = Depends(current_user)):
 
 
 def _public(u: dict) -> dict:
-    return {k: u[k] for k in ("username", "staff_id", "display_name", "must_change", "is_admin", "default_tab", "cal_default")}
+    return {k: u[k] for k in ("username", "staff_id", "display_name", "must_change", "is_admin") if k in u} | {"default_tab": u.get("default_tab") or "cal", "cal_default": u.get("cal_default", True)}
 
 
 # ---------- reference data ----------
@@ -264,6 +264,7 @@ class EventIn(BaseModel):
     date: str
     time: str = ""
     end: str = ""
+    endDate: str = ""
     cat: str = ""
     loc: str = ""
     notes: str = ""
@@ -274,7 +275,7 @@ class EventIn(BaseModel):
 
 def _event_rows(c, where: str = "", params: tuple = ()) -> list[dict]:
     evs = c.execute(
-        "SELECT id,title,date,start_time,end_time,category,location,notes,deleted,updated_at,updated_by,created_by "
+        "SELECT id,title,date,end_date,start_time,end_time,category,location,notes,deleted,updated_at,updated_by,created_by "
         f"FROM events {where} ORDER BY updated_at", params
     ).fetchall()
     if not evs:
@@ -285,7 +286,7 @@ def _event_rows(c, where: str = "", params: tuple = ()) -> list[dict]:
         att.setdefault(r["event_id"], []).append([r["attendee_type"].strip(), r["ref_id"]])
     return [
         {"id": e["id"], "title": e["title"], "date": e["date"].isoformat(), "time": e["start_time"],
-         "end": e["end_time"], "cat": e["category"], "loc": e["location"], "notes": e["notes"],
+         "end": e["end_time"], "endDate": e["end_date"].isoformat() if e["end_date"] else "", "cat": e["category"], "loc": e["location"], "notes": e["notes"],
          "deleted": e["deleted"], "att": att.get(e["id"], []),
          "updatedAt": e["updated_at"].isoformat(), "updatedBy": e["updated_by"], "createdBy": e["created_by"]}
         for e in evs
@@ -320,12 +321,12 @@ def put_event(event_id: str, ev: EventIn, u: dict = Depends(current_user)):
         if cur and incoming and incoming < cur["updated_at"]:
             return {"ok": True, "stale": True, "event": _event_rows(c, "WHERE id=%s", (event_id,))[0]}
         c.execute(
-            """INSERT INTO events (id,title,date,start_time,end_time,category,location,notes,deleted,created_by,updated_by,updated_at)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
+            """INSERT INTO events (id,title,date,end_date,start_time,end_time,category,location,notes,deleted,created_by,updated_by,updated_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,now())
                ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title,date=EXCLUDED.date,start_time=EXCLUDED.start_time,
-                 end_time=EXCLUDED.end_time,category=EXCLUDED.category,location=EXCLUDED.location,notes=EXCLUDED.notes,
+                 end_date=EXCLUDED.end_date,end_time=EXCLUDED.end_time,category=EXCLUDED.category,location=EXCLUDED.location,notes=EXCLUDED.notes,
                  deleted=EXCLUDED.deleted,updated_by=EXCLUDED.updated_by,updated_at=now()""",
-            (event_id, ev.title.strip()[:300], day, ev.time[:5], ev.end[:5], ev.cat[:60], ev.loc[:300], ev.notes[:20000],
+            (event_id, ev.title.strip()[:300], day, ev.endDate[:10] if ev.endDate else None, ev.time[:5], ev.end[:5], ev.cat[:60], ev.loc[:300], ev.notes[:20000],
              ev.deleted, u["username"], u["username"]),
         )
         c.execute("DELETE FROM event_attendees WHERE event_id=%s", (event_id,))
