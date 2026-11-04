@@ -613,16 +613,38 @@ function renderCal(main){
     title=days[0].toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+days[6].toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
     const evs=calEvents();const H0=6,H1=21;
     let g=`<div class="wgrid"><div class="whead"></div>${days.map(d=>`<div class="whead ${iso(d)===TODAY?'today':''}">${d.toLocaleDateString('en-US',{weekday:'short'})} ${d.getDate()}</div>`).join('')}`;
-    g+=`<div class="allday muted" style="font-size:11px;text-align:right;padding-right:6px;border-left:0">all-day</div>`+days.map(d=>{const ds=iso(d);return `<div class="allday">${evs.filter(e=>e.date<=ds&&(e.endDate||e.date)>=ds&&(!e.time||e.endDate>e.date)).map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${staffColor(e)}">${esc(e.title)}</button>`).join('')}</div>`;}).join('');
+    g+=`<div class="allday muted" style="font-size:11px;text-align:right;padding-right:6px;border-left:0">all-day</div>`+days.map(d=>{const ds=iso(d);return `<div class="allday">${evs.filter(e=>e.date<=ds&&(e.endDate||e.date)>=ds&&!e.time).map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${staffColor(e)}">${esc(e.title)}</button>`).join('')}</div>`;}).join('');
     g+=`<div>${[...Array(H1-H0)].map((_,k)=>`<div class="hcell">${fmtTime(pad(H0+k)+':00').replace(':00','')}</div>`).join('')}</div>`;
-    g+=days.map(d=>{const ds=iso(d);const timed=evs.filter(e=>e.date===ds&&e.time);
+    g+=days.map(d=>{const ds=iso(d);const timed=evs.filter(e=>e.date===ds&&e.time&&!(e.endDate&&e.endDate>e.date));
       const lanes=[];timed.forEach(e=>{const s=toMin(e.time),en=e.end?toMin(e.end):s+60;let L=0;while(lanes[L]&&lanes[L]>s)L++;lanes[L]=en;e._l=L;});
       const n=Math.max(1,lanes.length);
       const blocks=timed.map(e=>{const s=toMin(e.time),en=e.end?toMin(e.end):s+60;const top=Math.max(0,(s-H0*60))*48/60,h=Math.max(22,(en-s)*48/60);const w=100/n;
         return `<button class="blk" data-open="${esc(e.id)}" style="top:${top}px;height:${h}px;left:calc(${e._l*w}% + 2px);width:calc(${w}% - 4px);background:${staffColor(e)}"><b>${fmtTime(e.time)}</b> ${esc(e.title)}</button>`;}).join('');
       let nowl='';if(ds===TODAY){const nw=new Date();const m=nw.getHours()*60+nw.getMinutes();if(m>H0*60&&m<H1*60)nowl=`<div class="nowline" style="top:${(m-H0*60)*48/60}px"></div>`;}
       return `<div class="dcol ${ds===TODAY?'today':''}">${[...Array(H1-H0)].map((_,k)=>`<div class="slot" data-slot="${ds}|${H0+k}" title="New appointment"></div>`).join('')}${blocks}${nowl}</div>`;}).join('');
-    body=`<div class="week" id="wk">${g}</div></div>`;
+    var _spans=evs.filter(function(e){return e.time&&e.endDate&&e.endDate>e.date;});
+var _sphtml='';
+if(_spans.length){
+  var _N=days.length;
+  _spans.forEach(function(e){
+    var _d1=days.findIndex(function(d){return iso(d)===e.date;});
+    var _d2=days.findIndex(function(d){return iso(d)>=e.endDate;});
+    if(_d1<0)return;
+    var _d2c=_d2<0?_N-1:Math.min(_d2,_N-1);
+    var _s=toMin(e.time),_en=e.end?toMin(e.end):_s+60;
+    var _top=Math.max(0,(_s-H0*60))*48/60;
+    var _h=Math.max(22,(_en-_s)*48/60);
+    var _nd=_d2c-_d1+1;
+    var _left='calc(56px + '+_d1+' * ((100% - 56px) / '+_N+'))';
+    var _wid='calc('+_nd+' * ((100% - 56px) / '+_N+') - 4px)';
+    _sphtml+='<button class="blk" data-open="'+esc(e.id)+'" style="'
+      +'top:'+_top+'px;height:'+_h+'px;'
+      +'left:'+_left+';width:'+_wid+';'
+      +'background:'+staffColor(e)+';z-index:3;pointer-events:auto">'
+      +'<b>'+fmtTime(e.time)+'</b> '+esc(e.title)+'</button>';
+  });
+}
+body=`<div class="week" id="wk" style="position:relative">${g}${_sphtml?'<div style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none">'+_sphtml+'</div>':''}</div></div>`;
   } else if(S.calMode==='month'){
     const f=new Date(S.calDate.getFullYear(),S.calDate.getMonth(),1);const st=weekStart(f);title=f.toLocaleDateString('en-US',{month:'long',year:'numeric'});
     const evs=calEvents();
