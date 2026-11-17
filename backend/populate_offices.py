@@ -9,9 +9,14 @@ def run(dry_run=False):
         cur = conn.cursor()
         cur.execute("ALTER TABLE account_offices ADD COLUMN IF NOT EXISTS contact_id TEXT")
 
-        # Pass 1: one Company address per account (most recent job)
-        cur.execute("DELETE FROM account_offices WHERE office_type = %s AND source = %s", ("Company","fm"))
-        d1 = cur.rowcount
+        # Pass 1: Company addresses - upsert on (account_id, office_type)
+        # Add unique index if not exists
+        cur.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS uix_offices_company
+            ON account_offices (account_id, office_type)
+            WHERE office_type = 'Company' AND source = 'fm'
+        """)
+
         cur.execute("""
             INSERT INTO account_offices
                 (id, account_id, office_type, address, city, state, zip, notes, deleted, source, updated_at)
@@ -25,12 +30,36 @@ def run(dry_run=False):
               AND trim(coalesce(billing_city,'')) != ''
               AND account_id IS NOT NULL
             ORDER BY account_id, coalesce(job_date, quote_date) DESC NULLS LAST
+            ON CONFLICT (account_id, office_type)
+            WHERE office_type = 'Company' AND source = 'fm'
+            DO UPDATE SET
+                address    = CASE WHEN EXCLUDED.address != account_offices.address
+                                  THEN EXCLUDED.address ELSE account_offices.address END,
+                city       = CASE WHEN EXCLUDED.address != account_offices.address
+                                  THEN EXCLUDED.city    ELSE account_offices.city    END,
+                state      = CASE WHEN EXCLUDED.address != account_offices.address
+                                  THEN EXCLUDED.state   ELSE account_offices.state   END,
+                zip        = CASE WHEN EXCLUDED.address != account_offices.address
+                                  THEN EXCLUDED.zip     ELSE account_offices.zip     END,
+                lat        = CASE WHEN EXCLUDED.address != account_offices.address
+                                  THEN NULL ELSE account_offices.lat END,
+                lng        = CASE WHEN EXCLUDED.address != account_offices.address
+                                  THEN NULL ELSE account_offices.lng END,
+                geocoded_at= CASE WHEN EXCLUDED.address != account_offices.address
+                                  THEN NULL ELSE account_offices.geocoded_at END,
+                notes      = EXCLUDED.notes,
+                deleted    = false,
+                updated_at = now()
         """)
         i1 = cur.rowcount
 
-        # Pass 2: one Buyer address per buyer per account (most recent job)
-        cur.execute("DELETE FROM account_offices WHERE office_type = %s AND source = %s", ("Buyer","fm"))
-        d2 = cur.rowcount
+        # Pass 2: Buyer addresses - upsert on (account_id, upper(buyer_name))
+        cur.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS uix_offices_buyer
+            ON account_offices (account_id, upper(trim(notes)))
+            WHERE office_type = 'Buyer' AND source = 'fm'
+        """)
+
         cur.execute("""
             INSERT INTO account_offices
                 (id, account_id, contact_id, office_type, address, city, state, zip, notes, deleted, source, updated_at)
@@ -47,22 +76,45 @@ def run(dry_run=False):
               AND q.account_id IS NOT NULL
             ORDER BY q.account_id, upper(trim(q.buyer_name)),
                      coalesce(q.job_date, q.quote_date) DESC NULLS LAST
+            ON CONFLICT (account_id, upper(trim(notes)))
+            WHERE office_type = 'Buyer' AND source = 'fm'
+            DO UPDATE SET
+                address    = CASE WHEN EXCLUDED.address != account_offices.address
+                                  THEN EXCLUDED.address ELSE account_offices.address END,
+                city       = CASE WHEN EXCLUDED.address != account_offices.address
+                                  THEN EXCLUDED.city    ELSE account_offices.city    END,
+                state      = CASE WHEN EXCLUDED.address != account_offices.address
+                                  THEN EXCLUDED.state   ELSE account_offices.state   END,
+                zip        = CASE WHEN EXCLUDED.address != account_offices.address
+                                  THEN EXCLUDED.zip     ELSE account_offices.zip     END,
+                lat        = CASE WHEN EXCLUDED.address != account_offices.address
+                                  THEN NULL ELSE account_offices.lat END,
+                lng        = CASE WHEN EXCLUDED.address != account_offices.address
+                                  THEN NULL ELSE account_offices.lng END,
+                geocoded_at= CASE WHEN EXCLUDED.address != account_offices.address
+                                  THEN NULL ELSE account_offices.geocoded_at END,
+                contact_id = EXCLUDED.contact_id,
+                deleted    = false,
+                updated_at = now()
         """)
         i2 = cur.rowcount
 
         if dry_run:
             conn.rollback()
-            print(f"DRY RUN: {i1} company, {i2} buyer addresses")
+            print(f"DRY RUN: {i1} company, {i2} buyer upserted")
             return
 
         conn.commit()
-        print(f"Company:  cleared {d1}, inserted {i1}")
-        print(f"Buyer:    cleared {d2}, inserted {i2}")
+        print(f"Company upserted: {i1}")
+        print(f"Buyer upserted:   {i2}")
         rows = cur.execute("""
-            SELECT office_type, count(*) n FROM account_offices
-            WHERE NOT deleted AND source='fm' GROUP BY office_type
+            SELECT office_type, count(*) n,
+                   count(lat) geocoded
+            FROM account_offices
+            WHERE NOT deleted AND source='fm'
+            GROUP BY office_type
         """).fetchall()
-        for r in rows: print(f"  {r['office_type']}: {r['n']}")
+        for r in rows: print(f"  {r['office_type']}: {r['n']} total, {r['geocoded']} geocoded")
 
 if __name__ == "__main__":
     run(dry_run="--dry" in sys.argv)
