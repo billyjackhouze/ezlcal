@@ -1,0 +1,678 @@
+{
+  "backup_time": "2026-11-17T14:11:37.159619",
+  "row_count": 84,
+  "rows": [
+    {
+      "id": "104210_328_job",
+      "job_number": "104210",
+      "sales_person": "TGREEN",
+      "record_type": "job",
+      "job_date": "2012-10-18",
+      "quote_date": "2012-10-04"
+    },
+    {
+      "id": "104386_2202_job",
+      "job_number": "104386",
+      "sales_person": "TPALMER",
+      "record_type": "job",
+      "job_date": "2012-10-22",
+      "quote_date": "2012-10-09"
+    },
+    {
+      "id": "265709_735_job",
+      "job_number": "265709",
+      "sales_person": "Vela, Joseph",
+      "record_type": "job",
+      "job_date": "2026-07-08",
+      "quote_date": "2026-04-17"
+    },
+    {
+      "id": "265710_735_job",
+      "job_number": "265710",
+      "sales_person": "Joseph Vela",
+      "record_type": "job",
+      "job_date": "2026-07-08",
+      "quote_date": "2026-04-17"
+    },
+    {
+      "id": "267547_212_quote",
+      "job_number": "267547",
+      "sales_person": "jvela",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-06-04"
+    },
+    {
+      "id": "267556_328_job",
+      "job_number": "267556",
+      "sales_person": "jvela",
+      "record_type": "job",
+      "job_date": "2026-06-25",
+      "quote_date": "2026-06-18"
+    },
+    {
+      "id": "267564_58_job",
+      "job_number": "267564",
+      "sales_person": "jvela",
+      "record_type": "job",
+      "job_date": "2026-06-05",
+      "quote_date": "2026-06-05"
+    },
+    {
+      "id": "267572_328_quote",
+      "job_number": "267572",
+      "sales_person": "jvela",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-06-05"
+    },
+    {
+      "id": "267894_302_quote",
+      "job_number": "267894",
+      "sales_person": "Vela,Joseph",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": null
+    },
+    {
+      "id": "267906_7064_quote",
+      "job_number": "267906",
+      "sales_person": "Vela, Joseph",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": null
+    },
+    {
+      "id": "267951_5763_quote",
+      "job_number": "267951",
+      "sales_person": "Vela,Joseph",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-06-24"
+    },
+    {
+      "id": "268661_555_quote",
+      "job_number": "268661",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-07-24"
+    },
+    {
+      "id": "268693_6530_job",
+      "job_number": "268693",
+      "sales_person": "Adonis Gonzaqlez",
+      "record_type": "job",
+      "job_date": "2026-08-12",
+      "quote_date": "2026-08-12"
+    },
+    {
+      "id": "268974_6246_job",
+      "job_number": "268974",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "job",
+      "job_date": "2026-07-31",
+      "quote_date": "2026-07-31"
+    },
+    {
+      "id": "268984_555_quote",
+      "job_number": "268984",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-20"
+    },
+    {
+      "id": "268995_5842_quote",
+      "job_number": "268995",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-07"
+    },
+    {
+      "id": "269013_484_quote",
+      "job_number": "269013",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-07-29"
+    },
+    {
+      "id": "269071_7099_quote",
+      "job_number": "269071",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-07-30"
+    },
+    {
+      "id": "269077_6036_job",
+      "job_number": "269077",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "job",
+      "job_date": "2026-08-17",
+      "quote_date": "2026-08-12"
+    },
+    {
+      "id": "269342_2017_job",
+      "job_number": "269342",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "job",
+      "job_date": "2026-09-03",
+      "quote_date": "2026-08-13"
+    },
+    {
+      "id": "269347_616_quote",
+      "job_number": "269347",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-18"
+    },
+    {
+      "id": "269372_1657_quote",
+      "job_number": "269372",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-14"
+    },
+    {
+      "id": "269389_5842_quote",
+      "job_number": "269389",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-11"
+    },
+    {
+      "id": "269724_2017_quote",
+      "job_number": "269724",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-31"
+    },
+    {
+      "id": "269735_328_quote",
+      "job_number": "269735",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-17"
+    },
+    {
+      "id": "269777_1000_job",
+      "job_number": "269777",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "job",
+      "job_date": "2026-08-25",
+      "quote_date": "2026-08-24"
+    },
+    {
+      "id": "269790_6471_job",
+      "job_number": "269790",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "job",
+      "job_date": "2026-08-31",
+      "quote_date": "2026-08-31"
+    },
+    {
+      "id": "269806_530_quote",
+      "job_number": "269806",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-25"
+    },
+    {
+      "id": "269816_785_quote",
+      "job_number": "269816",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-20"
+    },
+    {
+      "id": "270146_350_job",
+      "job_number": "270146",
+      "sales_person": "Adonis",
+      "record_type": "job",
+      "job_date": "2026-09-02",
+      "quote_date": "2026-09-01"
+    },
+    {
+      "id": "270177_42_quote",
+      "job_number": "270177",
+      "sales_person": "Adonis",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-09-02"
+    },
+    {
+      "id": "270181_2293_quote",
+      "job_number": "270181",
+      "sales_person": "Adonis",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-09-01"
+    },
+    {
+      "id": "270187_143_quote",
+      "job_number": "270187",
+      "sales_person": "Adonis",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-09-02"
+    },
+    {
+      "id": "270216_3993_quote",
+      "job_number": "270216",
+      "sales_person": "Adonis",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-09-02"
+    },
+    {
+      "id": "111108_199_quote",
+      "job_number": "111108",
+      "sales_person": "TPalmer",
+      "record_type": "quote",
+      "job_date": "2013-07-08",
+      "quote_date": "2013-07-08"
+    },
+    {
+      "id": "111595_257_quote",
+      "job_number": "111595",
+      "sales_person": "TPalmer",
+      "record_type": "quote",
+      "job_date": "2013-08-05",
+      "quote_date": "2013-07-25"
+    },
+    {
+      "id": "267482_396_job",
+      "job_number": "267482",
+      "sales_person": "jvela",
+      "record_type": "job",
+      "job_date": "2026-06-15",
+      "quote_date": "2026-06-12"
+    },
+    {
+      "id": "267499_396_job",
+      "job_number": "267499",
+      "sales_person": "jvela",
+      "record_type": "job",
+      "job_date": "2026-08-17",
+      "quote_date": "2026-06-03"
+    },
+    {
+      "id": "268765_2017_job",
+      "job_number": "268765",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "job",
+      "job_date": "2026-08-31",
+      "quote_date": "2026-08-24"
+    },
+    {
+      "id": "268813_444_quote",
+      "job_number": "268813",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-07-24"
+    },
+    {
+      "id": "268824_335_quote",
+      "job_number": "268824",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-07-20"
+    },
+    {
+      "id": "268825_6880_job",
+      "job_number": "268825",
+      "sales_person": "Joseph Vela",
+      "record_type": "job",
+      "job_date": "2026-08-06",
+      "quote_date": "2026-07-23"
+    },
+    {
+      "id": "269080_356_quote",
+      "job_number": "269080",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-07-29"
+    },
+    {
+      "id": "269097_7100_quote",
+      "job_number": "269097",
+      "sales_person": "jvela",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-07-28"
+    },
+    {
+      "id": "269163_444_job",
+      "job_number": "269163",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "job",
+      "job_date": "2026-08-18",
+      "quote_date": "2026-08-13"
+    },
+    {
+      "id": "269165_58_quote",
+      "job_number": "269165",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-17"
+    },
+    {
+      "id": "269180_3604_quote",
+      "job_number": "269180",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-07-31"
+    },
+    {
+      "id": "269466_735_quote",
+      "job_number": "269466",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-11"
+    },
+    {
+      "id": "269491_2926_job",
+      "job_number": "269491",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "job",
+      "job_date": "2026-08-24",
+      "quote_date": "2026-08-13"
+    },
+    {
+      "id": "269509_4726_quote",
+      "job_number": "269509",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-11"
+    },
+    {
+      "id": "269553_519_quote",
+      "job_number": "269553",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-25"
+    },
+    {
+      "id": "269577_2_quote",
+      "job_number": "269577",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-13"
+    },
+    {
+      "id": "269858_2926_quote",
+      "job_number": "269858",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-21"
+    },
+    {
+      "id": "269879_735_quote",
+      "job_number": "269879",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-26"
+    },
+    {
+      "id": "269892_3004_quote",
+      "job_number": "269892",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-24"
+    },
+    {
+      "id": "269894_519_quote",
+      "job_number": "269894",
+      "sales_person": "Adonis",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-09-14"
+    },
+    {
+      "id": "269905_1970_job",
+      "job_number": "269905",
+      "sales_person": "Adonis",
+      "record_type": "job",
+      "job_date": "2026-09-15",
+      "quote_date": "2026-08-31"
+    },
+    {
+      "id": "269941_7079_quote",
+      "job_number": "269941",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-09-02"
+    },
+    {
+      "id": "269945_5842_quote",
+      "job_number": "269945",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-31"
+    },
+    {
+      "id": "269955_7085_quote",
+      "job_number": "269955",
+      "sales_person": "Adonis",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-09-02"
+    },
+    {
+      "id": "270348_5836_quote",
+      "job_number": "270348",
+      "sales_person": "Adonis",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-09-14"
+    },
+    {
+      "id": "267317_2145_quote",
+      "job_number": "267317",
+      "sales_person": "jvela",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-05-28"
+    },
+    {
+      "id": "267345_7039_quote",
+      "job_number": "267345",
+      "sales_person": "jvela",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-05-28"
+    },
+    {
+      "id": "267360_6973_job",
+      "job_number": "267360",
+      "sales_person": "jvela",
+      "record_type": "job",
+      "job_date": "2026-06-19",
+      "quote_date": "2026-06-19"
+    },
+    {
+      "id": "267390_6839_job",
+      "job_number": "267390",
+      "sales_person": "jvela",
+      "record_type": "job",
+      "job_date": "2026-06-02",
+      "quote_date": "2026-06-02"
+    },
+    {
+      "id": "267851_5842_quote",
+      "job_number": "267851",
+      "sales_person": "Vela, Joseph",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": null
+    },
+    {
+      "id": "268586_2017_job",
+      "job_number": "268586",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "job",
+      "job_date": "2026-07-27",
+      "quote_date": "2026-07-20"
+    },
+    {
+      "id": "268837_565_quote",
+      "job_number": "268837",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-07-30"
+    },
+    {
+      "id": "268863_519_quote",
+      "job_number": "268863",
+      "sales_person": "Adones Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-07-24"
+    },
+    {
+      "id": "268869_2392_quote",
+      "job_number": "268869",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": null
+    },
+    {
+      "id": "269208_2541_quote",
+      "job_number": "269208",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-11"
+    },
+    {
+      "id": "269277_5842_quote",
+      "job_number": "269277",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-04"
+    },
+    {
+      "id": "269614_2017_job",
+      "job_number": "269614",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "job",
+      "job_date": "2026-09-02",
+      "quote_date": "2026-08-18"
+    },
+    {
+      "id": "269632_2017_job",
+      "job_number": "269632",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "job",
+      "job_date": "2026-09-01",
+      "quote_date": "2026-09-01"
+    },
+    {
+      "id": "269642_335_quote",
+      "job_number": "269642",
+      "sales_person": "Adonis",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-09-14"
+    },
+    {
+      "id": "269643_735_job",
+      "job_number": "269643",
+      "sales_person": "Joseph Vela",
+      "record_type": "job",
+      "job_date": "2026-08-14",
+      "quote_date": "2026-08-13"
+    },
+    {
+      "id": "269645_2733_quote",
+      "job_number": "269645",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-27"
+    },
+    {
+      "id": "269691_4976_quote",
+      "job_number": "269691",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": null
+    },
+    {
+      "id": "270021_2017_job",
+      "job_number": "270021",
+      "sales_person": "Adonis Gonzalez",
+      "record_type": "job",
+      "job_date": "2026-09-02",
+      "quote_date": "2026-08-28"
+    },
+    {
+      "id": "270037_2017_job",
+      "job_number": "270037",
+      "sales_person": "Adonis",
+      "record_type": "job",
+      "job_date": "2026-09-14",
+      "quote_date": "2026-09-09"
+    },
+    {
+      "id": "270038_6890_quote",
+      "job_number": "270038",
+      "sales_person": "Adonis",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-09-11"
+    },
+    {
+      "id": "270064_397_quote",
+      "job_number": "270064",
+      "sales_person": "Adonis",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-08-27"
+    },
+    {
+      "id": "270067_267_quote",
+      "job_number": "270067",
+      "sales_person": "Adonis",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": null
+    },
+    {
+      "id": "270523_708_quote",
+      "job_number": "270523",
+      "sales_person": "Adonis",
+      "record_type": "quote",
+      "job_date": null,
+      "quote_date": "2026-09-14"
+    }
+  ]
+}

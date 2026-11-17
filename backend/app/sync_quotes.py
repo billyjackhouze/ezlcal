@@ -229,7 +229,13 @@ def run(full=False):
             num(r.get("TOTAL JOB AMOUNT calc", 0)),
         ))
 
-    print(f"Upserting {len(upsert_rows)} rows ({skip} skipped)...")
+    # Filter to only rows whose account_id exists in Postgres
+    with psycopg.connect(DB, row_factory=dict_row) as _c:
+        valid_ids = {r["id"] for r in _c.execute("SELECT id FROM accounts").fetchall()}
+    before = len(upsert_rows)
+    upsert_rows = [r for r in upsert_rows if r[1] in valid_ids]
+    skip += before - len(upsert_rows)
+    print(f"Upserting {len(upsert_rows)} rows ({skip} skipped, {before-len(upsert_rows)} missing account)...")
 
     with psycopg.connect(DB, row_factory=dict_row) as c:
         with c.transaction(), c.cursor() as cur:
