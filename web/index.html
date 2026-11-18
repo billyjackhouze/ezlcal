@@ -279,8 +279,8 @@ window.__start=function(D){
 'use strict';
 const ACC=D.accounts, CON=D.contacts, STF=D.staff;
 const TYPE={C:'Customer',U:'End user',G:'Engineering'};
-const CATC={'Luncheon':'#2f8f3a','Breakfast':'#2f8f3a','Dinner':'#2f8f3a','Lunch and learn':'#1c7c74','Outing':'#d4721c','Meeting':'#2f6fde','Site visit':'#1c7c74','Travel':'#6b6b72','Follow-up':'#7d4fc4','Trade show':'#b5487a','Company event':'#a8862a','Appointment':'#2f6fde'};
-const CATS=['Luncheon','Breakfast','Dinner','Lunch and learn','Meeting','Site visit','Outing','Trade show','Follow-up','Travel','Company event','Personal'];
+const CATC={'Sales':'#2f6fde','Lunch':'#2f8f3a','Dinner':'#1c7c74','Trade show':'#b5487a','Personal':'#6b6b72'};
+const CATS=['Sales','Lunch','Dinner','Trade show','Personal'];
 const catColor=c=>CATC[c]||'#5f6b7a';
 const staffColor=e=>{
   if(e&&e.createdBy){
@@ -567,7 +567,7 @@ document.addEventListener('click',e=>{
   else if(t.hasAttribute('data-themebtn')){const dark=matchMedia('(prefers-color-scheme: dark)').matches;const cur=theme||(dark?'dark':'light');theme=cur==='dark'?'light':'dark';ls.set(LS_THEME,theme);applyTheme();}
   else if(t.dataset.open){openDetail(t.dataset.open);}
   else if(t.dataset.goto){const [k,i]=t.dataset.goto.split(':');S.modal=null;go(k,k,+i);}
-  else if(t.dataset.cal){const n=+t.dataset.cal;if(n===0)S.calDate=new Date();else{const d=new Date(S.calDate);if(S.calMode==='month')d.setMonth(d.getMonth()+n);else d.setDate(d.getDate()+7*n);S.calDate=d;}render();}
+  else if(t.dataset.cal){const n=+t.dataset.cal;if(n===0)S.calDate=new Date();else{const d=new Date(S.calDate);if(S.calMode==='month')d.setMonth(d.getMonth()+n);else if(S.calMode==='day')d.setDate(d.getDate()+n);else d.setDate(d.getDate()+7*n);S.calDate=d;}render();}
   else if(t.dataset.calmode){S.calMode=t.dataset.calmode;render();}
   else if(t.dataset.slot){const [d,h]=t.dataset.slot.split('|');openEditor(null,{date:d,time:h?pad(+h)+':00':''});}
   else if(t.dataset.team){const i=+t.dataset.team;const k=S.teamWho.indexOf(i);if(k>=0)S.teamWho.splice(k,1);else S.teamWho.push(i);render();}
@@ -608,7 +608,29 @@ function renderCal(main){
     </div>
   </div>`;
   let title,body;
-  if(S.calMode==='week'){
+  if(S.calMode==='day'){
+    const H0=6,H1=21;
+    const ds=iso(S.calDate);
+    title=S.calDate.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+    const evs=calEvents().filter(e=>e.date===ds);
+    const allDay=evs.filter(e=>!e.time);
+    const timed=evs.filter(e=>e.time&&!(e.endDate&&e.endDate>e.date));
+    const spanBlocks=evs.filter(e=>e.time&&e.endDate&&e.endDate>e.date&&e.date===ds).map(function(e){
+      var s=toMin(e.time),top=Math.max(0,(s-H0*60))*48/60,h=(H1-H0)*48-top;
+      return '<button class="blk" data-open="'+esc(e.id)+'" style="top:'+top+'px;height:'+h+'px;left:1px;width:calc(100% - 2px);background:'+staffColor(e)+';border-radius:4px;z-index:2;overflow:hidden"><b>'+fmtTime(e.time)+'</b> '+esc(e.title)+'</button>';
+    }).join('');
+    const lanes=[];timed.forEach(e=>{const s=toMin(e.time),en=e.end?toMin(e.end):s+60;let L=0;while(lanes[L]&&lanes[L]>s)L++;lanes[L]=en;e._l=L;});
+    const n=Math.max(1,lanes.length);
+    const blocks=timed.map(e=>{
+      const s=toMin(e.time),en=e.end?toMin(e.end):s+60;
+      const top=Math.max(0,(s-H0*60))*48/60,h=Math.max(22,(en-s)*48/60);
+      const w=100/n;
+      return `<button class="blk" data-open="${esc(e.id)}" style="top:${top}px;height:${h}px;left:calc(${e._l*w}% + 2px);width:calc(${w}% - 4px);background:${staffColor(e)}"><b>${fmtTime(e.time)}</b> ${esc(e.title)}</button>`;
+    }).join('');
+    const adbRow=allDay.length?`<div class="wgrid" style="min-width:0"><div class="whead" style="font-size:11px;color:var(--muted)">all-day</div><div class="dcol" style="min-height:28px">${allDay.map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${staffColor(e)}">${esc(e.title)}</button>`).join('')}</div></div>`:'';
+    let nowl='';if(ds===TODAY){const nw=new Date();const m=nw.getHours()*60+nw.getMinutes();if(m>H0*60&&m<H1*60)nowl=`<div class="nowline" style="top:${(m-H0*60)*48/60}px"></div>`;}
+    body=`${adbRow}<div class="wgrid" style="min-width:0"><div class="whead" style="font-size:11px;color:var(--muted)">Time</div><div class="dcol" style="width:100%">${[...Array(H1-H0)].map((_,k)=>`<div class="slot" data-slot="${ds}|${H0+k}" title="New appointment"></div>`).join('')}${blocks}${spanBlocks}${nowl}</div></div>`;
+  } else if(S.calMode==='week'){
     const ws=weekStart(S.calDate);const days=[...Array(7)].map((_,k)=>addDays(ws,k));
     title=days[0].toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+days[6].toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
     const evs=calEvents();const H0=6,H1=21;
@@ -649,12 +671,12 @@ body=`<div class="week" id="wk" style="position:relative">${g}${_sphtml?'<div st
     const f=new Date(S.calDate.getFullYear(),S.calDate.getMonth(),1);const st=weekStart(f);title=f.toLocaleDateString('en-US',{month:'long',year:'numeric'});
     const evs=calEvents();
     body=`<div class="month">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div class="whead" style="position:static">${d}</div>`).join('')}${[...Array(42)].map((_,k)=>{const d=addDays(st,k),ds=iso(d);const es=evs.filter(e=>e.date<=ds&&(e.endDate||e.date)>=ds);
-      return `<div class="mcell ${d.getMonth()!==f.getMonth()?'out':''} ${ds===TODAY?'today':''}"><div class="n"><button class="more" data-slot="${ds}|" aria-label="New appointment on ${ds}">${d.getDate()}</button></div>${es.slice(0,3).map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${staffColor(e)}">${e.time?fmtTime(e.time).replace(':00','')+' ':''}${esc(e.title)}</button>`).join('')}${es.length>3?`<button class="more" data-calmode="list">+${es.length-3} more</button>`:''}</div>`;}).join('')}</div>`;
+      return `<div class="mcell ${d.getMonth()!==f.getMonth()?'out':''} ${ds===TODAY?'today':''}"><div class="n"><button class="more" data-slot="${ds}|" aria-label="New appointment on ${ds}">${d.getDate()}</button></div>${es.map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${staffColor(e)}">${e.time?fmtTime(e.time).replace(':00','')+' ':''}${esc(e.title)}</button>`).join('')}</div>`;}).join('')}</div>`;
   } else {
     title='Upcoming';const evs=calEvents().filter(e=>e.date>=iso(addDays(new Date(),-30)));
     body=`<div class="listview">${timeline(evs,false)}</div>`;
   }
-  main.innerHTML=`<div class="cal"><div class="calbar">${who}<div class="seg">${[['week','Week'],['month','Month'],['list','List']].map(([k,l])=>`<button data-calmode="${k}" aria-pressed="${S.calMode===k}">${l}</button>`).join('')}</div>
+  main.innerHTML=`<div class="cal"><div class="calbar">${who}<div class="seg">${[['day','Day'],['week','Week'],['month','Month'],['list','List']].map(([k,l])=>`<button data-calmode="${k}" aria-pressed="${S.calMode===k}">${l}</button>`).join('')}</div>
     <h2>${esc(title)}</h2><button class="btn icon" data-cal="-1" aria-label="Previous">‹</button><button class="btn" data-cal="0">Today</button><button class="btn icon" data-cal="1" aria-label="Next">›</button></div>${body}`;
   document.addEventListener('click',function(e){var h=e.target.closest('[data-toggle]');console.log('toggle click',h,h&&h.dataset.toggle);if(h&&!e.target.closest('button')&&!e.target.closest('a')){var box=document.getElementById(h.dataset.toggle);console.log('toggling box',box,box&&box.id);if(box)box.classList.toggle('collapsed');}});window.toggleCalWho=()=>{const dd=document.getElementById('calwho-dd');if(dd)dd.style.display=dd.style.display==='none'?'block':'none';};
   window.pickCalWho=i=>{S.calWho=i;try{localStorage.setItem('ezl_calWho',i);}catch(e){}const dd=document.getElementById('calwho-dd');if(dd)dd.style.display='none';render();};
