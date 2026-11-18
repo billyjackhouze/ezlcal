@@ -614,15 +614,13 @@ function renderCal(main){
     title=S.calDate.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
     const evs=calEvents().filter(e=>e.date===ds);
     const allDay=evs.filter(e=>!e.time);
-    const timed=evs.filter(e=>e.time&&!(e.endDate&&e.endDate>e.date));
-    const spanBlocks=evs.filter(e=>e.time&&e.endDate&&e.endDate>e.date&&e.date===ds).map(function(e){
-      var s=toMin(e.time),top=Math.max(0,(s-H0*60))*48/60,h=(H1-H0)*48-top;
-      return '<button class="blk" data-open="'+esc(e.id)+'" style="top:'+top+'px;height:'+h+'px;left:1px;width:calc(100% - 2px);background:'+staffColor(e)+';border-radius:4px;z-index:2;overflow:hidden"><b>'+fmtTime(e.time)+'</b> '+esc(e.title)+'</button>';
-    }).join('');
-    const lanes=[];timed.forEach(e=>{const s=toMin(e.time),en=e.end?toMin(e.end):s+60;let L=0;while(lanes[L]&&lanes[L]>s)L++;lanes[L]=en;e._l=L;});
+    const timed=evs.filter(e=>e.date===ds&&e.time&&!(e.endDate&&e.endDate>e.date));
+    const mdSpans=evs.filter(e=>e.time&&e.endDate&&e.endDate>e.date&&e.date<=ds&&e.endDate>=ds).map(function(e){var isFirst=e.date===ds,isLast=e.endDate===ds;return Object.assign({},e,{_mdStart:isFirst?e.time:'00:00',_mdEnd:isLast?(e.end||e.time):'23:59'});});
+    const spanBlocks='';
+    const lanes=[];timed.forEach(e=>{const s=toMin(e._mdStart||e.time),en=toMin(e._mdEnd||(e.end||''))||s+60;let L=0;while(lanes[L]&&lanes[L]>s)L++;lanes[L]=en;e._l=L;});
     const n=Math.max(1,lanes.length);
-    const blocks=timed.map(e=>{
-      const s=toMin(e.time),en=e.end?toMin(e.end):s+60;
+    const blocks=[...timed,...mdSpans].map(e=>{
+      const s=toMin(e._mdStart||e.time),en=toMin(e._mdEnd||(e.end||''))||s+60;
       const top=Math.max(0,(s-H0*60))*48/60,h=Math.max(22,(en-s)*48/60);
       const w=100/n;
       return `<button class="blk" data-open="${esc(e.id)}" style="top:${top}px;height:${h}px;left:calc(${e._l*w}% + 2px);width:calc(${w}% - 4px);background:${staffColor(e)}"><b>${fmtTime(e.time)}</b> ${esc(e.title)}</button>`;
@@ -637,7 +635,7 @@ function renderCal(main){
     let g=`<div class="wgrid"><div class="whead"></div>${days.map(d=>`<div class="whead ${iso(d)===TODAY?'today':''}">${d.toLocaleDateString('en-US',{weekday:'short'})} ${d.getDate()}</div>`).join('')}`;
     g+=`<div class="allday muted" style="font-size:11px;text-align:right;padding-right:6px;border-left:0">all-day</div>`+days.map(d=>{const ds=iso(d);return `<div class="allday">${evs.filter(e=>e.date<=ds&&(e.endDate||e.date)>=ds&&!e.time).map(e=>`<button class="adb" data-open="${esc(e.id)}" style="background:${staffColor(e)}">${esc(e.title)}</button>`).join('')}</div>`;}).join('');
     g+=`<div>${[...Array(H1-H0)].map((_,k)=>`<div class="hcell">${fmtTime(pad(H0+k)+':00').replace(':00','')}</div>`).join('')}</div>`;
-    g+=days.map(d=>{const ds=iso(d);const multiDay=evs.filter(e=>e.date===ds&&e.time&&e.endDate&&e.endDate>e.date);const timed=evs.filter(e=>e.date===ds&&e.time&&!(e.endDate&&e.endDate>e.date));const allTimed=[...timed,...multiDay];
+    g+=days.map(d=>{const ds=iso(d);const multiDay=evs.filter(e=>e.date===ds&&e.time&&e.endDate&&e.endDate>e.date);const timed=evs.filter(e=>e.date===ds&&e.time&&!(e.endDate&&e.endDate>e.date));const mdSpans=evs.filter(e=>e.time&&e.endDate&&e.endDate>e.date&&e.date<=ds&&e.endDate>=ds).map(function(e){var isFirst=e.date===ds,isLast=e.endDate===ds;return Object.assign({},e,{_mdStart:isFirst?e.time:'00:00',_mdEnd:isLast?(e.end||e.time):'23:59',_mdFirst:isFirst,_mdLast:isLast});});const allTimed=[...timed,...multiDay];
       const lanes=[];allTimed.forEach(e=>{const s=toMin(e.time),en=e.end?toMin(e.end):s+60;let L=0;while(lanes[L]&&lanes[L]>s)L++;lanes[L]=en;e._l=L;});
       const n=Math.max(1,lanes.length);
       const blocks=allTimed.map(e=>{const s=toMin(e.time),en=e.end?toMin(e.end):s+60;const top=Math.max(0,(s-H0*60))*48/60,h=e.endDate&&e.endDate>e.date?(H1-H0)*48-top:Math.max(22,(en-s)*48/60);const w=100/n;
