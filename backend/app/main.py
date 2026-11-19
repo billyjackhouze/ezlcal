@@ -519,6 +519,7 @@ def get_map(u: dict = Depends(current_user)):
             JOIN accounts a ON a.id = o.account_id
             WHERE NOT o.deleted
               AND o.lat IS NOT NULL
+              AND o.office_type = 'Company'
             ORDER BY a.name, o.office_type
         """).fetchall()
     return {"offices": [
