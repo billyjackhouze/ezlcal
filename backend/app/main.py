@@ -104,14 +104,21 @@ def bootstrap(response: Response, if_none_match: str = Header(default=""), u: di
         stamp = c.execute(
             "SELECT (SELECT max(updated_at) FROM accounts)::text || (SELECT max(updated_at) FROM contacts)::text"
             " || (SELECT count(*) FROM staff WHERE active)::text || (SELECT count(*) FROM contact_accounts)::text"
-            " || coalesce((SELECT max(updated_at) FROM account_offices)::text,'') || 'v3' AS s"
+            " || coalesce((SELECT max(updated_at) FROM account_offices)::text,'') || 'v4' AS s"
         ).fetchone()["s"]
         etag = '"' + hashlib.sha1((stamp or "").encode()).hexdigest()[:16] + '"'
         if if_none_match == etag:
             return Response(status_code=304, headers={"ETag": etag})
         acc = c.execute(
-            "SELECT id,name,types,parent_id,root_id,sales_ytd,sales_py,quotes_ytd,last_order,address,city,state,zip,homepage"
-            " FROM accounts ORDER BY name"
+            "SELECT a.id, a.name, a.types, a.parent_id, a.root_id,"
+            " COALESCE(SUM(CASE WHEN aq.record_type='job' AND date_part('year',aq.job_date)=date_part('year',now()) THEN aq.total_amount ELSE 0 END),0) AS sales_ytd,"
+            " COALESCE(SUM(CASE WHEN aq.record_type='job' AND date_part('year',aq.job_date)=date_part('year',now())-1 THEN aq.total_amount ELSE 0 END),0) AS sales_py,"
+            " COALESCE(SUM(CASE WHEN aq.record_type='quote' AND date_part('year',COALESCE(aq.quote_date,aq.job_date))=date_part('year',now()) THEN aq.total_amount ELSE 0 END),0) AS quotes_ytd,"
+            " a.last_order, a.address, a.city, a.state, a.zip, a.homepage"
+            " FROM accounts a"
+            " LEFT JOIN account_quotes aq ON aq.account_id=a.id"
+            " GROUP BY a.id, a.name, a.types, a.parent_id, a.root_id, a.last_order, a.address, a.city, a.state, a.zip, a.homepage"
+            " ORDER BY a.name"
         ).fetchall()
         con = c.execute(
             "SELECT id,name,account_id,title,email,phone_direct,phone_mobile,address,city,state,zip,linkedin,work_remote,active"
