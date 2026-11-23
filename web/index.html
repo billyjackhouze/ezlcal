@@ -424,6 +424,10 @@ function toggleQJDetail(tr){
   tr.closest('tbody').querySelectorAll('tr.qjdetail').forEach(d=>d.style.display='none');
   if(!open)det.style.display='';
 }
+window.toggleQJDetail=toggleQJDetail;
+window.filterQJTable=filterQJTable;
+window.filterMainQJTable=filterMainQJTable;
+
 function renderQJBox(box,data,isQuote){var _body=box.querySelector('.collapsible-body');if(_body)box=_body;
   const label=isQuote?'Quotes':'Jobs';
   const dateKey=isQuote?'quote_date':'job_date';
