@@ -249,8 +249,8 @@ async function start(){
   try{const r=await api('/events');if(r.ok){const j=await r.json();raw={};j.events.forEach(e=>raw[e.id]=e);p(EV,raw);p(SN,j.serverTime);}}catch(e){if(e&&e.code===401)return;}
   raw=raw||{};
   // index maps between FileMaker keys and in-app positions
-  const K={a:boot.accounts.map(a=>a[0]),c:boot.contacts.map(c=>c[0]),s:boot.staff.map(s=>s[0])};
-  const IX={a:new Map(K.a.map((k,i)=>[k,i])),c:new Map(K.c.map((k,i)=>[k,i])),s:new Map(K.s.map((k,i)=>[k,i]))};
+  const K={a:boot.accounts.map(a=>a[0]),c:boot.contacts.map(c=>c[0]),s:boot.staff.map(s=>s[0])};window.__accIds=K.a;
+  const IX={a:new Map(K.a.map((k,i)=>[k,i])),c:new Map(K.c.map((k,i)=>[k,i])),s:new Map(K.s.map((k,i)=>[k,i]))};window.__IX=IX;window.__K=K;
   const toIdx=att=>(att||[]).map(([t,k])=>[t,IX[t]?IX[t].get(String(k)):undefined]).filter(x=>x[1]!==undefined);
   const fromServer=e=>({id:e.id,title:e.title,date:e.date,time:e.time||'',end:e.end||'',endDate:e.endDate||'',allDay:!e.time,cat:e.cat||'',loc:e.loc||'',notes:e.notes||'',deleted:!!e.deleted,att:toIdx(e.att),updatedAt:e.updatedAt,updatedBy:e.updatedBy,createdBy:e.createdBy||''});
   const toServer=e=>({id:e.id,title:e.title,date:e.date,time:e.time||'',end:e.end||'',endDate:e.endDate||'',cat:e.cat||'',loc:e.loc||'',notes:e.notes||'',deleted:!!e.deleted,updatedAt:e.updatedAt,att:(e.att||[]).map(([t,i])=>[t,K[t][i]])});
@@ -370,6 +370,8 @@ const kids={}; ACC.forEach((a,i)=>{if(a[2]>=0){(kids[a[2]]=kids[a[2]]||[]).push(
 const conAccts=CON.map((c,i)=>new Set(c[1]>=0?[c[1]]:[]));
 const linkBy={}; D.links.forEach(l=>{conAccts[l[0]].add(l[1]);linkBy[l[1]+':'+l[0]]=l;});
 const conByAcct={}; conAccts.forEach((set,i)=>set.forEach(a=>(conByAcct[a]=conByAcct[a]||[]).push(i)));
+window.__conAccts=conAccts;window.__conByAcct=conByAcct;window.__CON=CON;window.__STF=STF;
+window.__S=S;
 const OFF=D.offices; const offByAcct=a=>OFF.filter(o=>o.a===a);
 function family(i){const r=ACC[i][3]>=0?ACC[i][3]:i;const out=[];const walk=(n,d)=>{out.push([n,d]);(kids[n]||[]).sort((x,y)=>ACC[x][0].localeCompare(ACC[y][0])).forEach(k=>walk(k,d+1));};walk(r,0);return out;}
 const name=(t,i)=>t==='a'?(ACC[i]?ACC[i][0]:'Account'):t==='c'?(CON[i]?CON[i][0]:'Contact'):(STF[i]?STF[i][0]:'Staff');
@@ -458,6 +460,7 @@ function renderQJBox(box,data,isQuote){var _body=box.querySelector('.collapsible
       r.billing_terms?`<span><b>Terms:</b> ${r.billing_terms}</span>`:'',
       r.job_status?`<span><b>Status:</b> ${r.job_status}</span>`:'',
       r.enduser_ref?`<span><b>End User Ref:</b> ${r.enduser_ref}</span>`:'',
+      (r.billing_address||r.billing_city)?`<span><b>Ship To:</b> ${[r.billing_address,r.billing_city,r.billing_state,r.billing_zip].filter(Boolean).join(', ')}</span>`:'',
     ].filter(Boolean).join('');
     const breakdown=(r.clamps_total||r.pipejacks_total||r.specialty_total)?
       `<div class="qjbreakdown">${r.clamps_total?`<span>Clamps: ${fmt.format(r.clamps_total)}</span>`:''}${r.pipejacks_total?`<span>Pipe Jacks: ${fmt.format(r.pipejacks_total)}</span>`:''}${r.specialty_total?`<span>Specialty: ${fmt.format(r.specialty_total)}</span>`:''}</div>`:'';
@@ -507,6 +510,7 @@ function _renderMainQJRows(type,rows,dateKey,fmt){
       r.billing_terms?`<span><b>Terms:</b> ${r.billing_terms}</span>`:'',
       r.job_status?`<span><b>Status:</b> ${r.job_status}</span>`:'',
       r.enduser_ref?`<span><b>End User Ref:</b> ${r.enduser_ref}</span>`:'',
+      (r.billing_address||r.billing_city)?`<span><b>Ship To:</b> ${[r.billing_address,r.billing_city,r.billing_state,r.billing_zip].filter(Boolean).join(', ')}</span>`:'',
     ].filter(Boolean).join('');
     const breakdown=(r.clamps_total||r.pipejacks_total||r.specialty_total)?
       `<div class="qjbreakdown">${r.clamps_total?`<span>Clamps: ${fmt.format(r.clamps_total)}</span>`:''}${r.pipejacks_total?`<span>Pipe Jacks: ${fmt.format(r.pipejacks_total)}</span>`:''}${r.specialty_total?`<span>Specialty: ${fmt.format(r.specialty_total)}</span>`:''}</div>`:'';
@@ -853,16 +857,16 @@ function openNewContact(preAcctIdx,onCreated){
     ares.innerHTML='<div class="res">'+hits.map(i=>'<button type="button" data-pi="'+i+'"><span>'+esc(ACC[i][0])+'<\/span><span class="muted" style="font-size:12px">'+esc(ACC[i][1].split('').filter(Boolean).map(c=>TYPE[c]).join(', '))+'<\/span><\/button>').join('')+'<\/div>';
     ares.querySelectorAll('[data-pi]').forEach(b=>b.onclick=()=>{aq.value='';ares.innerHTML='';setSelAcct(+b.dataset.pi);});};
   m.querySelector('form').onsubmit=async e=>{e.preventDefault();
-    const body={name_first:document.getElementById('nc_first').value.trim(),name_last:document.getElementById('nc_last').value.trim(),title:document.getElementById('nc_title').value.trim(),email:document.getElementById('nc_email').value.trim(),phone_mobile:document.getElementById('nc_mobile').value.trim(),phone_direct:document.getElementById('nc_direct').value.trim(),account_id:selAcctIdx>=0?K.a[selAcctIdx]:null};
+    const body={name_first:document.getElementById('nc_first').value.trim(),name_last:document.getElementById('nc_last').value.trim(),title:document.getElementById('nc_title').value.trim(),email:document.getElementById('nc_email').value.trim(),phone_mobile:document.getElementById('nc_mobile').value.trim(),phone_direct:document.getElementById('nc_direct').value.trim(),account_id:selAcctIdx>=0?(window.__accIds&&window.__accIds[selAcctIdx])||null:null};
     if(!body.name_first){document.getElementById('nc_first').focus();return;}
     try{const r=await EZ.api('/contacts',{method:'POST',body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));
       if(!r.ok){toast(typeof j.detail==='string'?j.detail:'Could not add the contact');return;}
-      const ct=j.contact;const newIdx=CON.length;K.c.push(ct[0]);IX.c.set(String(ct[0]),newIdx);
-      CON.push([ct[1],ct[2]!=null&&IX.a.has(ct[2])?IX.a.get(ct[2]):-1,ct[3]||'',ct[4]||'',ct[5]||'',ct[6]||'','','','','','',false,true]);
-      conAccts[newIdx]=new Set(selAcctIdx>=0?[selAcctIdx]:[]);
-      if(selAcctIdx>=0)(conByAcct[selAcctIdx]=conByAcct[selAcctIdx]||[]).push(newIdx);
+      const ct=j.contact;const newIdx=CON.length;if(window.__K)window.__K.c.push(ct[0]);if(window.__IX)window.__IX.c.set(String(ct[0]),newIdx);
+      CON.push([ct[1],ct[2]!=null&&window.__IX&&window.__IX.a.has(ct[2])?window.__IX.a.get(ct[2]):-1,ct[3]||'',ct[4]||'',ct[5]||'',ct[6]||'','','','','','',false,true]);
+      (window.__conAccts||conAccts)[newIdx]=new Set(selAcctIdx>=0?[selAcctIdx]:[]);
+      if(selAcctIdx>=0)((window.__conByAcct||conByAcct)[selAcctIdx]=(window.__conByAcct||conByAcct)[selAcctIdx]||[]).push(newIdx);
       close();toast('Contact added');
-      if(onCreated)onCreated(newIdx,ct[0]);else{S.view='c';S.sel.c=newIdx;render();}
+      if(onCreated)onCreated(newIdx,ct[0]);else if(window.render){(window.__S||S).view='c';(window.__S||S).sel.c=newIdx;window.render();}
     }catch(e){if(!(e&&e.code===401))toast('No connection. Could not add the contact.');}};
 }
 
@@ -1141,7 +1145,34 @@ function renderModal(){
         <label class="l" for="f_notes" style="align-self:start;padding-top:7px">Notes</label><textarea id="f_notes" rows="5" placeholder="Call report: who you met, what they're working on, next step">${esc(e.notes)}</textarea>
       </div>
       <div class="foot"><button class="btn" id="m_cancel">Cancel</button><button class="btn primary" id="m_save">${navigator.onLine?'Save appointment':'Save to this device'}</button></div></div></div>`;
-    const sync=()=>{e.title=$('#f_title').value;e.date=$('#f_date').value;const all=$('#f_all').checked;e.time=all?'':($('#f_time').value||'09:00');e.end=all?'':$('#f_end').value;e.endDate=(function(){var d=$('#f_end_date');return d?d.value||'':'';})();e.cat=$('#f_cat').value;e.loc=$('#f_loc').value;e.notes=$('#f_notes').value;};
+    const sync=()=>{e.title=$('#f_title').value;e.date=$('#f_date').value;const all=$('#f_all').checked;e.time=all?'':($('#f_time').value||'09:00');e.end=all?'':$('#f_end').value;e.endDate=(function(){var d=$('#f_end_date');return d?d.value||'':'';window.launchNav=launchNav;
+
+window.applyTheme=applyTheme;
+window.close=close;
+window.closeModal=closeModal;
+window.drawPins=drawPins;
+window.events=events;
+window.fitMap=fitMap;
+window.flush=flush;
+window.go=go;
+window.loadAdmin=loadAdmin;
+window.openEditor=openEditor;
+window.openNewAccount=openNewAccount;
+window.openNewContact=openNewContact;
+window.pull=pull;
+window.render=render;
+window.renderMap=renderMap;
+window.renderModal=renderModal;
+window.renderQJBox=renderQJBox;
+window.renderStatus=renderStatus;
+window.save=save;
+window.saveEvent=saveEvent;
+window.saveUserPref=saveUserPref;
+window.showLogin=showLogin;
+window.showTempPw=showTempPw;
+window.start=start;
+window.wireAdmin=wireAdmin;
+})();e.cat=$('#f_cat').value;e.loc=$('#f_loc').value;e.notes=$('#f_notes').value;};
     $('#m_x').onclick=closeModal;$('#m_cancel').onclick=closeModal;
     $('#f_all').onchange=()=>{sync();if(!$('#f_all').checked&&!e.time)e.time='09:00';renderModal();};
     m.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{sync();const [t,i]=b.dataset.rm.split(':');e.att=e.att.filter(x=>!(x[0]===t&&x[1]===+i));renderModal();$('#f_inv').focus();});
