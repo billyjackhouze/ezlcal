@@ -249,8 +249,8 @@ async function start(){
   try{const r=await api('/events');if(r.ok){const j=await r.json();raw={};j.events.forEach(e=>raw[e.id]=e);p(EV,raw);p(SN,j.serverTime);}}catch(e){if(e&&e.code===401)return;}
   raw=raw||{};
   // index maps between FileMaker keys and in-app positions
-  const K={a:boot.accounts.map(a=>a[0]),c:boot.contacts.map(c=>c[0]),s:boot.staff.map(s=>s[0])};window.__accIds=K.a;
-  const IX={a:new Map(K.a.map((k,i)=>[k,i])),c:new Map(K.c.map((k,i)=>[k,i])),s:new Map(K.s.map((k,i)=>[k,i]))};window.__IX=IX;window.__K=K;
+  const K={a:boot.accounts.map(a=>a[0]),c:boot.contacts.map(c=>c[0]),s:boot.staff.map(s=>s[0])};
+  const IX={a:new Map(K.a.map((k,i)=>[k,i])),c:new Map(K.c.map((k,i)=>[k,i])),s:new Map(K.s.map((k,i)=>[k,i]))};
   const toIdx=att=>(att||[]).map(([t,k])=>[t,IX[t]?IX[t].get(String(k)):undefined]).filter(x=>x[1]!==undefined);
   const fromServer=e=>({id:e.id,title:e.title,date:e.date,time:e.time||'',end:e.end||'',endDate:e.endDate||'',allDay:!e.time,cat:e.cat||'',loc:e.loc||'',notes:e.notes||'',deleted:!!e.deleted,att:toIdx(e.att),updatedAt:e.updatedAt,updatedBy:e.updatedBy,createdBy:e.createdBy||''});
   const toServer=e=>({id:e.id,title:e.title,date:e.date,time:e.time||'',end:e.end||'',endDate:e.endDate||'',cat:e.cat||'',loc:e.loc||'',notes:e.notes||'',deleted:!!e.deleted,updatedAt:e.updatedAt,att:(e.att||[]).map(([t,i])=>[t,K[t][i]])});
@@ -262,12 +262,13 @@ async function start(){
     staff:boot.staff.map(s=>[s[1],s[2]||'',s[0]||'',s[3]||'']),
     events:Object.values(raw).map(fromServer)
   };
-  window.__IX=IX;window.__K=K;
   window.__ezl={api,fromServer,toServer,signOut,user,akey:i=>K.a[i],_qcache:{},_jcache:{},
     patchBootOffice(row,deleted){const b=g(B,null);if(!b)return;b.offices=(b.offices||[]).filter(o=>o[0]!==row[0]);if(!deleted)b.offices.push(row);p(B,b);},meIdx:user.staff_id&&IX.s.has(user.staff_id)?IX.s.get(user.staff_id):-1,
     cacheRaw(list){const r=g(EV,{});list.forEach(e=>r[e.id]=e);p(EV,r);},
     async pullSince(){const since=g(SN,'');const r=await api('/events'+(since?'?since='+encodeURIComponent(since):''));if(!r.ok)throw new Error('pull');const j=await r.json();
       if(j.events.length){const rr=g(EV,{});j.events.forEach(e=>rr[e.id]=e);p(EV,rr);}p(SN,j.serverTime);return j.events;}};
+  await Promise.resolve();
+  D.__IX=IX;D.__K=K;
   window.__start(D);
   if(user.must_change)showPwChange(user);
 }
@@ -370,8 +371,6 @@ const kids={}; ACC.forEach((a,i)=>{if(a[2]>=0){(kids[a[2]]=kids[a[2]]||[]).push(
 const conAccts=CON.map((c,i)=>new Set(c[1]>=0?[c[1]]:[]));
 const linkBy={}; D.links.forEach(l=>{conAccts[l[0]].add(l[1]);linkBy[l[1]+':'+l[0]]=l;});
 const conByAcct={}; conAccts.forEach((set,i)=>set.forEach(a=>(conByAcct[a]=conByAcct[a]||[]).push(i)));
-window.__conAccts=conAccts;window.__conByAcct=conByAcct;window.__CON=CON;window.__STF=STF;
-window.__S=S;
 const OFF=D.offices; const offByAcct=a=>OFF.filter(o=>o.a===a);
 function family(i){const r=ACC[i][3]>=0?ACC[i][3]:i;const out=[];const walk=(n,d)=>{out.push([n,d]);(kids[n]||[]).sort((x,y)=>ACC[x][0].localeCompare(ACC[y][0])).forEach(k=>walk(k,d+1));};walk(r,0);return out;}
 const name=(t,i)=>t==='a'?(ACC[i]?ACC[i][0]:'Account'):t==='c'?(CON[i]?CON[i][0]:'Contact'):(STF[i]?STF[i][0]:'Staff');
@@ -460,7 +459,6 @@ function renderQJBox(box,data,isQuote){var _body=box.querySelector('.collapsible
       r.billing_terms?`<span><b>Terms:</b> ${r.billing_terms}</span>`:'',
       r.job_status?`<span><b>Status:</b> ${r.job_status}</span>`:'',
       r.enduser_ref?`<span><b>End User Ref:</b> ${r.enduser_ref}</span>`:'',
-      (r.billing_address||r.billing_city)?`<span><b>Ship To:</b> ${[r.billing_address,r.billing_city,r.billing_state,r.billing_zip].filter(Boolean).join(', ')}</span>`:'',
     ].filter(Boolean).join('');
     const breakdown=(r.clamps_total||r.pipejacks_total||r.specialty_total)?
       `<div class="qjbreakdown">${r.clamps_total?`<span>Clamps: ${fmt.format(r.clamps_total)}</span>`:''}${r.pipejacks_total?`<span>Pipe Jacks: ${fmt.format(r.pipejacks_total)}</span>`:''}${r.specialty_total?`<span>Specialty: ${fmt.format(r.specialty_total)}</span>`:''}</div>`:'';
@@ -510,7 +508,6 @@ function _renderMainQJRows(type,rows,dateKey,fmt){
       r.billing_terms?`<span><b>Terms:</b> ${r.billing_terms}</span>`:'',
       r.job_status?`<span><b>Status:</b> ${r.job_status}</span>`:'',
       r.enduser_ref?`<span><b>End User Ref:</b> ${r.enduser_ref}</span>`:'',
-      (r.billing_address||r.billing_city)?`<span><b>Ship To:</b> ${[r.billing_address,r.billing_city,r.billing_state,r.billing_zip].filter(Boolean).join(', ')}</span>`:'',
     ].filter(Boolean).join('');
     const breakdown=(r.clamps_total||r.pipejacks_total||r.specialty_total)?
       `<div class="qjbreakdown">${r.clamps_total?`<span>Clamps: ${fmt.format(r.clamps_total)}</span>`:''}${r.pipejacks_total?`<span>Pipe Jacks: ${fmt.format(r.pipejacks_total)}</span>`:''}${r.specialty_total?`<span>Specialty: ${fmt.format(r.specialty_total)}</span>`:''}</div>`:'';
@@ -743,8 +740,8 @@ function detailHtml(k,i){
       ${a[2]>=0?`<dt>parent</dt><dd><button class="linkbtn" data-goto="a:${a[2]}" style="color:var(--accent)">${esc(ACC[a[2]][0])}</button></dd>`:''}</dl></div>
       <div class="acctOffices"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><b style="flex:1">Offices</b><button class="btn" data-office="new:${i}">+ Add office</button></div>
         ${offs.length?offs.map(officeCard).join(''):'<div class="muted" style="font-size:12.5px;padding:8px 0">No offices yet. Add the HQ, accounting or sales office addresses here.</div>'}</div></div>
-      ${people.length?`<div class="box" id="cbox_${i}"><div class="boxhead collapsible" onclick="toggleBox('cbox_'+${i})"><b>Contacts</b><span class="muted">${people.length}</span><span class="spacer"></span><button class="btn" style="height:26px;padding:0 9px;font-size:12px" onclick="event.stopPropagation();openNewContact(${i})">+ Add contact</button><span class="collapse-chevron">&#9662;</span></div><div class="collapsible-body" style="overflow-x:auto"><table class="ctab"><thead><tr><th>Name</th><th>Mobile</th><th>Direct</th><th>Email</th><th class="num">Sales YTD</th><th class="num">Prior yr</th><th class="num">Quotes YTD</th></tr></thead><tbody>
-        ${people.map(c=>{const C=CON[c],L=linkBy[i+':'+c];return `<tr class="${C[12]?'':'inactive'}"><td><button class="linkbtn" data-goto="c:${c}"><b>${esc(C[0])}</b></button>${C[2]?`<div class="muted" style="font-size:12px">${esc(C[2])}</div>`:''}</td><td>${tel(C[5])}</td><td>${tel(C[4])}</td><td>${C[3]?`<a href="mailto:${esc(C[3])}">${esc(C[3])}</a>`:''}</td><td class="num">${L&&L[2]?money(L[2]):''}</td><td class="num">${L&&L[3]?money(L[3]):''}</td><td class="num">${L&&L[4]?money(L[4]):''}</td></tr>`;}).join('')}</tbody></table></div></div></div>`:''}
+      <div class="box" id="cbox_${i}"><div class="boxhead collapsible" onclick="toggleBox('cbox_'+${i})"><b>Contacts</b><span class="muted">${people.length}</span><span class="spacer"></span><button class="btn" style="height:26px;padding:0 9px;font-size:12px" onclick="event.stopPropagation();openNewContact(${i})">+ Add contact</button><span class="collapse-chevron">&#9662;</span></div><div class="collapsible-body" style="overflow-x:auto"><table class="ctab"><thead><tr><th>Name</th><th>Mobile</th><th>Direct</th><th>Email</th><th class="num">Sales YTD</th><th class="num">Prior yr</th><th class="num">Quotes YTD</th></tr></thead><tbody>
+        ${people.map(c=>{const C=CON[c],L=linkBy[i+':'+c];return `<tr class="${C[12]?'':'inactive'}"><td><button class="linkbtn" data-goto="c:${c}"><b>${esc(C[0])}</b></button>${C[2]?`<div class="muted" style="font-size:12px">${esc(C[2])}</div>`:''}</td><td>${tel(C[5])}</td><td>${tel(C[4])}</td><td>${C[3]?`<a href="mailto:${esc(C[3])}">${esc(C[3])}</a>`:''}</td><td class="num">${L&&L[2]?money(L[2]):''}</td><td class="num">${L&&L[3]?money(L[3]):''}</td><td class="num">${L&&L[4]?money(L[4]):''}</td></tr>`;}).join('')}</tbody></table></div></div></div>
       <div class="box" id="qbox_${i}"><div class="boxhead collapsible" onclick="toggleBox('qbox_'+${i})"><b>Quotes</b><span class="spacer"></span><span class="collapse-chevron">&#9662;</span></div><div class="collapsible-body empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div><div class="box" id="jbox_${i}"><div class="boxhead collapsible" onclick="toggleBox('jbox_'+${i})"><b>Jobs</b><span class="spacer"></span><span class="collapse-chevron">&#9662;</span></div><div class="collapsible-body empty muted" style="font-size:12px;padding:12px 16px">Loading…</div></div>
     ${fam.length>1?`<div class="box" id="fambox_${i}"><div class="boxhead collapsible" onclick="toggleBox('fambox_'+${i})"><b>Company family</b><span class="muted">parent, children and grandchildren</span><span class="spacer"></span><span class="muted" style="font-size:12px;width:86px;text-align:right">Sales YTD</span><span class="muted" style="font-size:12px;width:92px;text-align:right">Last order</span><span class="collapse-chevron">&#9662;</span></div>
         <div class="collapsible-body" style="max-height:320px;overflow:auto">${fam.map(([n,d])=>`<div class="frow" style="${n===i?'background:var(--btnOn)':''}"><span style="width:${d*16}px;flex:0 0 ${d*16}px"></span><span class="muted" style="width:14px">${d?'└':'◆'}</span><button class="linkbtn" data-goto="a:${n}" style="flex:1;min-width:0;${d?'':'font-weight:600'}">${esc(ACC[n][0])}</button><span class="num" style="width:86px">${money(ACC[n][4])}</span><span class="num muted" style="width:92px">${ACC[n][7]?fmtDate(ACC[n][7]):'—'}</span></div>`).join('')}</div></div>`:''}
@@ -861,12 +858,12 @@ function openNewContact(preAcctIdx,onCreated){
     if(!body.name_first){document.getElementById('nc_first').focus();return;}
     try{const r=await EZ.api('/contacts',{method:'POST',body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));
       if(!r.ok){toast(typeof j.detail==='string'?j.detail:'Could not add the contact');return;}
-      const ct=j.contact;const newIdx=CON.length;if(window.__K)window.__K.c.push(ct[0]);if(window.__IX)window.__IX.c.set(String(ct[0]),newIdx);
-      CON.push([ct[1],ct[2]!=null&&window.__IX&&window.__IX.a.has(ct[2])?window.__IX.a.get(ct[2]):-1,ct[3]||'',ct[4]||'',ct[5]||'',ct[6]||'','','','','','',false,true]);
-      (window.__conAccts||conAccts)[newIdx]=new Set(selAcctIdx>=0?[selAcctIdx]:[]);
-      if(selAcctIdx>=0)((window.__conByAcct||conByAcct)[selAcctIdx]=(window.__conByAcct||conByAcct)[selAcctIdx]||[]).push(newIdx);
+      const ct=j.contact;const _CON=window.__CON;const _IX=window.__IX;const _K=window.__K;const _ca=window.__conAccts;const _cba=window.__conByAcct;const _S=window.__S;const _r=window.render;const newIdx=_CON.length;_K.c.push(ct[0]);_IX.c.set(String(ct[0]),newIdx);
+      _CON.push([ct[1],ct[2]!=null&&_IX.a.has(ct[2])?_IX.a.get(ct[2]):-1,ct[3]||'',ct[4]||'',ct[5]||'',ct[6]||'','','','','','',false,true]);
+      _ca[newIdx]=new Set(selAcctIdx>=0?[selAcctIdx]:[]);
+      if(selAcctIdx>=0)(_cba[selAcctIdx]=_cba[selAcctIdx]||[]).push(newIdx);
       close();toast('Contact added');
-      if(onCreated)onCreated(newIdx,ct[0]);else if(window.render){(window.__S||S).view='c';(window.__S||S).sel.c=newIdx;window.render();}
+      if(onCreated)onCreated(newIdx,ct[0]);else{_S.view='c';_S.sel.c=newIdx;_r();}
     }catch(e){if(!(e&&e.code===401))toast('No connection. Could not add the contact.');}};
 }
 
@@ -1145,34 +1142,7 @@ function renderModal(){
         <label class="l" for="f_notes" style="align-self:start;padding-top:7px">Notes</label><textarea id="f_notes" rows="5" placeholder="Call report: who you met, what they're working on, next step">${esc(e.notes)}</textarea>
       </div>
       <div class="foot"><button class="btn" id="m_cancel">Cancel</button><button class="btn primary" id="m_save">${navigator.onLine?'Save appointment':'Save to this device'}</button></div></div></div>`;
-    const sync=()=>{e.title=$('#f_title').value;e.date=$('#f_date').value;const all=$('#f_all').checked;e.time=all?'':($('#f_time').value||'09:00');e.end=all?'':$('#f_end').value;e.endDate=(function(){var d=$('#f_end_date');return d?d.value||'':'';window.launchNav=launchNav;
-
-window.applyTheme=applyTheme;
-window.close=close;
-window.closeModal=closeModal;
-window.drawPins=drawPins;
-window.events=events;
-window.fitMap=fitMap;
-window.flush=flush;
-window.go=go;
-window.loadAdmin=loadAdmin;
-window.openEditor=openEditor;
-window.openNewAccount=openNewAccount;
-window.openNewContact=openNewContact;
-window.pull=pull;
-window.render=render;
-window.renderMap=renderMap;
-window.renderModal=renderModal;
-window.renderQJBox=renderQJBox;
-window.renderStatus=renderStatus;
-window.save=save;
-window.saveEvent=saveEvent;
-window.saveUserPref=saveUserPref;
-window.showLogin=showLogin;
-window.showTempPw=showTempPw;
-window.start=start;
-window.wireAdmin=wireAdmin;
-})();e.cat=$('#f_cat').value;e.loc=$('#f_loc').value;e.notes=$('#f_notes').value;};
+    const sync=()=>{e.title=$('#f_title').value;e.date=$('#f_date').value;const all=$('#f_all').checked;e.time=all?'':($('#f_time').value||'09:00');e.end=all?'':$('#f_end').value;e.endDate=(function(){var d=$('#f_end_date');return d?d.value||'':'';})();e.cat=$('#f_cat').value;e.loc=$('#f_loc').value;e.notes=$('#f_notes').value;};
     $('#m_x').onclick=closeModal;$('#m_cancel').onclick=closeModal;
     $('#f_all').onchange=()=>{sync();if(!$('#f_all').checked&&!e.time)e.time='09:00';renderModal();};
     m.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{sync();const [t,i]=b.dataset.rm.split(':');e.att=e.att.filter(x=>!(x[0]===t&&x[1]===+i));renderModal();$('#f_inv').focus();});
@@ -1199,6 +1169,10 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.modal&&S.modal.mo
 function confirmOut(){toast(outbox.length+' appointment(s) still waiting to sync. Reconnect first, then sign out.');return false;}
 let tt;function toast(msg){let t=$('.toast');if(!t){t=document.createElement('div');t.className='toast';t.setAttribute('role','status');document.body.appendChild(t);}t.textContent=msg;clearTimeout(tt);tt=setTimeout(()=>t.remove(),2600);}
 
+window.openNewContact=openNewContact;
+window.openNewAccount=openNewAccount;
+window.render=render;
+window.__IX=D.__IX;window.__K=D.__K;window.__CON=CON;window.__conAccts=conAccts;window.__conByAcct=conByAcct;window.__S=S;window.__accIds=D.__K?D.__K.a:null;
 render();
 };
 </script>
